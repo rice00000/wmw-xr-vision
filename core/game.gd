@@ -5,9 +5,12 @@ extends Node
 const PLAYER_SCENE := "res://player/player.tscn"
 ## Seconds the view stays faded out while a level loads.
 const FADE_TIME := 0.25
+## There is no flat-screen mode: PC / Mac run the same XR code through an OpenXR runtime.
+const NO_RUNTIME_MESSAGE := """No OpenXR runtime found.
 
-## True when an OpenXR session drives the screen; false means desktop fallback.
-var is_xr := false
+On PC / Mac, open Meta XR Simulator and switch on its OpenXR runtime toggle
+(or start Quest Link / SteamVR), then run the game again."""
+
 ## The active player rig. Registers itself when it enters the tree.
 var player: Node3D
 ## The active level root. Set by Level when it becomes ready.
@@ -70,9 +73,10 @@ func place_player(xform: Transform3D) -> void:
 func _start_xr() -> void:
 	_xr = XRServer.find_interface("OpenXR")
 	if _xr == null or not _xr.is_initialized():
-		print("[Game] No XR runtime, using desktop mode.")
+		if DisplayServer.get_name() != "headless": # the smoke test runs without XR on purpose
+			push_error(NO_RUNTIME_MESSAGE)
+			OS.alert.call_deferred(NO_RUNTIME_MESSAGE, "XRVision") # after Save is ready: the alert steals focus
 		return
-	is_xr = true
 	var viewport := get_viewport()
 	viewport.use_xr = true
 	if RenderingServer.get_rendering_device():

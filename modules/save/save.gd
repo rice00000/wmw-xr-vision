@@ -30,6 +30,8 @@ func _ready() -> void:
 
 
 func _notification(what: int) -> void:
+	if not is_inside_tree(): # app focus can change before we're ready (e.g. an XR runtime window)
+		return
 	match what:
 		NOTIFICATION_WM_CLOSE_REQUEST, NOTIFICATION_APPLICATION_PAUSED, NOTIFICATION_APPLICATION_FOCUS_OUT:
 			write()

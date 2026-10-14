@@ -7,7 +7,6 @@
 [ext_resource type="Script" path="res://player/wrist_info.gd" id="5_wrist"]
 [ext_resource type="Script" path="res://player/locomotion.gd" id="6_locomotion"]
 [ext_resource type="Script" path="res://player/teleport.gd" id="7_teleport"]
-[ext_resource type="Script" path="res://player/desktop_controls.gd" id="8_desktop"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_head"]
 radius = 0.15
@@ -116,6 +115,3 @@ visible = false
 cast_shadow = 0
 mesh = SubResource("CylinderMesh_marker")
 surface_material_override/0 = SubResource("StandardMaterial3D_marker")
-
-[node name="DesktopControls" type="Node" parent="."]
-script = ExtResource("8_desktop")

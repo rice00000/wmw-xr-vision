@@ -1,5 +1,5 @@
 extends Node
-## Smooth movement (left stick, or WASD on desktop) and snap turning (right stick).
+## Smooth movement (left stick) and snap turning (right stick).
 ## Stops at walls. Delete this node for room-scale / teleport-only play.
 
 @export var enabled := true
@@ -18,7 +18,7 @@ var _can_turn := true
 func _physics_process(delta: float) -> void:
 	if not enabled:
 		return
-	var stick := _left.get_vector2(&"primary") + _keyboard()
+	var stick := _left.get_vector2(&"primary")
 	if stick.length() > deadzone:
 		_move(stick.limit_length(1.0), delta)
 	_snap_turn(_right.get_vector2(&"primary"))
@@ -47,9 +47,3 @@ func _snap_turn(stick: Vector2) -> void:
 	pivot.y = _origin.global_position.y
 	var turn := Transform3D(Basis(Vector3.UP, deg_to_rad(snap_degrees) * -signf(stick.x)), Vector3.ZERO)
 	_origin.global_transform = (turn * _origin.global_transform.translated(-pivot)).translated(pivot)
-
-
-func _keyboard() -> Vector2:
-	return Vector2(
-		float(Input.is_physical_key_pressed(KEY_D)) - float(Input.is_physical_key_pressed(KEY_A)),
-		float(Input.is_physical_key_pressed(KEY_W)) - float(Input.is_physical_key_pressed(KEY_S)))

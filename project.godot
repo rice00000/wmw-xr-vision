@@ -27,6 +27,12 @@ Training="*res://modules/training/training.gd"
 Vision="*res://modules/vision/vision.gd"
 Voice="*res://modules/voice/voice.gd"
 
+[display]
+
+window/size/window_width_override.macos=320
+window/size/window_height_override.macos=180
+window/size/always_on_top.macos=true
+
 [physics]
 
 3d/physics_engine="Jolt Physics"
@@ -39,8 +45,7 @@ anti_aliasing/quality/msaa_3d=2
 
 [xr]
 
-openxr/enabled=false
-openxr/enabled.android=true
+openxr/enabled=true
 openxr/startup_alert=false
-openxr/extensions/hand_tracking=false
 shaders/enabled=true
+openxr/enabled.android=true

@@ -7,7 +7,7 @@ extends XROrigin3D
 ##   - it sets Game.player to itself,
 ##   - its hands call touch() / grab() on things (see hand.gd),
 ##   - its head calls player_entered() on Zones.
-## Child nodes (Locomotion, Teleport, DesktopControls, Subtitle...) can be deleted freely.
+## Child nodes (Locomotion, Teleport, Subtitle...) can be deleted freely.
 
 @onready var camera := $Camera as XRCamera3D
 

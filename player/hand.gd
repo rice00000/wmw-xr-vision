@@ -2,7 +2,7 @@ class_name Hand
 extends Area3D
 ## A hand. Grabs Grabbable bodies and touches anything that has a touch(hand) method.
 ##
-## Driven by its parent XRController3D, or by DesktopControls when there's no headset.
+## Driven by its parent XRController3D.
 ## Interaction is duck-typed: objects don't need to know about hands, they just
 ## implement touch() (see Touchable) or extend Grabbable.
 
@@ -12,7 +12,8 @@ extends Area3D
 ## The body currently held, or null.
 var held: Grabbable
 
-var _controller: XRController3D
+@onready var _controller := get_parent() as XRController3D
+
 var _offset := Transform3D.IDENTITY
 var _velocity := Vector3.ZERO
 var _last_position := Vector3.ZERO
@@ -21,10 +22,8 @@ var _last_position := Vector3.ZERO
 func _ready() -> void:
 	add_to_group(&"hand")
 	area_entered.connect(_on_area_entered)
-	_controller = get_parent() as XRController3D
-	if _controller:
-		_controller.button_pressed.connect(_on_button_pressed)
-		_controller.button_released.connect(_on_button_released)
+	_controller.button_pressed.connect(_on_button_pressed)
+	_controller.button_released.connect(_on_button_released)
 
 
 func grab() -> void:
@@ -46,10 +45,9 @@ func release() -> void:
 	held = null
 
 
-## Short controller vibration. Does nothing on desktop.
+## Short controller vibration.
 func pulse(strength := 0.5, duration := 0.08) -> void:
-	if _controller:
-		_controller.trigger_haptic_pulse(&"haptic", 0.0, strength, duration, 0.0)
+	_controller.trigger_haptic_pulse(&"haptic", 0.0, strength, duration, 0.0)
 
 
 func _physics_process(delta: float) -> void:

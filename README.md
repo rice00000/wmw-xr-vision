@@ -1,115 +1,75 @@
 # XRVision
 
-Whitebox foundation for the **Project Prakash VR game**: a Quest 3 adventure in which children
-who have recently regained sight explore, catch creatures, finish quests and decorate their home,
-with visual training built into the play.
+A VR magical adventure in which children who have recently regained sight explore, catch creatures, finish quests and decorate their home, with visual training built into the play.
 
-Godot **4.7.2**, GDScript, Mobile renderer, OpenXR. About 1,400 lines of game code in total;
-every file is short enough to read in one sitting.
+Godot **4.7.2**, GDScript, Mobile renderer, OpenXR.
 
-> Training targets (motion, search, contrast) are placeholders until they are validated with vision researchers.
+Files are grouped by feature instead of type: each script sits next to its scene and assets, as recommended by the official [Godot project organization guide](https://docs.godotengine.org/en/stable/tutorials/best_practices/project_organization.html).
+
+**First playable loop:** Home tutorial → Training (catch 3 butterflies) → Backyard quest (find the blue butterfly) → Magic Stone → buy and place furniture at home.
 
 ## Run it
 
-| What | How |
-|---|---|
-| Desktop (no headset) | Open in Godot 4.7, press F5. Mouse looks, WASD moves, the right hand follows the crosshair (pointing at something touches it), hold left mouse to grab, `H` = help, `Esc` = free mouse. |
-| One level only | Open `levels/<name>/<name>.tscn`, press F6. A player is created automatically. |
-| PC VR (Quest Link / SteamVR) | Run with `--xr-mode on`. |
-| Quest 3 | `tools\quest.cmd all`: build, install, launch and show logs. Also `build`, `install`, `run`, `log`, `shot`, `mirror`. |
-| Smoke test | `godot --headless --path . res://tests/smoke_test.tscn -- --slot=smoke_test`. Plays the whole first-playable loop; exit code 0 = pass. |
+- **PC / Mac:** install and open [Meta XR Simulator](https://developers.meta.com/horizon/documentation/native/xrsim-getting-started/), switch on its OpenXR runtime toggle, run project in Godot.
+  - **Why the simulator:** The input translation lives outside the game, so there is no desktop branch to write, maintain or drift from VR. What works in the simulator behaves the same on the headset, so most testing happens on a laptop and the Quest is only needed for performance and comfort. It makes project maintenance and testing more efficient.
+  - Interesting MacOS note: The godot preview window is configured as a small always-on-top mirror (`project.godot`) as when another window covers it, macOS stalls its frames to ~3 FPS.
+- **Quest builds:** install the **Godot OpenXR Vendors** plugin (5.1.0) from AssetLib. WIP
 
-**First-time setup on a new machine.** `addons/godotopenxrvendors/` (107 MB) is git-ignored:
-install the **Godot OpenXR Vendors** plugin (5.1.0) from the editor's asset store / AssetLib, or copy the folder from another project.
-The Android build template is installed automatically on the first `quest.cmd build`.
-`tools/quest.ps1` has machine paths at the top (Godot, JDK, Android SDK).
+**Controls:** grip grabs, touch to press or catch, left stick walks, right stick turns (push forward to teleport), B / Y repeats the instruction.
 
-In VR: **grip** grabs, touching things with your hand presses / catches them, **left stick** walks,
-**right stick** left/right snap-turns, **right stick forward** aims a teleport (release to jump),
-**B / Y** repeats the current instruction.
-
-## The first playable (Oct 23)
-
-1. **Home (tutorial):** grab the glowing ball, press the button, walk to the Training Room door.
-2. **Training:** catch 3 butterflies. They escape after 20 s, and their speed adapts to the player.
-3. **Backyard (quest):** find the blue butterfly among flowers and yellow decoys. Spirits:
-   *Clear Sight* removes fog; *Glow Finder* outlines the target.
-4. **Reward:** 1 Magic Stone and coins.
-5. **Progression:** back home, spend it on the furniture board, then move the furniture by hand. The layout is saved.
-
-All of this is data: quests in `content/quests/`, items in `content/items/`, spirit looks in `content/vision/`.
-
-## Architecture
+## Where things are
 
 ```
 core/        Events (signal bus), Game (XR start, level switching), Level, ItemDef
-player/      XR rig: hands, locomotion, teleport, desktop fallback, subtitles, fade, wrist info
+player/      XR rig: hands, locomotion, teleport, subtitles, fade, wrist info
 components/  generic building blocks: Touchable, TouchButton, Grabbable, Zone/door, Spawner, Scatter
-modules/     features, one folder each (see table)
-content/     data and small scenes: items, quests, vision profiles, creatures, props
+modules/     features, one folder each (table below)
+content/     data: items, quests, vision profiles, creatures, props
 levels/      home / training / backyard
 shared/      whitebox materials
 ```
 
-**Dependency rule:** `core` ← `player` / `components` ← `modules` ← `content` / `levels`.
-**Modules never call each other.** They either emit/listen on `Events`, or ask
-`Game.module(&"Name")`, which returns `null` when that module is switched off.
+## How modules connect
 
-| Module | Kind | Does | If you turn it off |
-|---|---|---|---|
-| `save` | autoload `Save` | Saves any node with `save_state()` / `load_state()`, automatically. JSON in `user://saves/<slot>.json` | Nothing persists |
-| `inventory` | autoload `Inventory` | Item id → count. Fills from `Events.reward_granted` | Rewards vanish, furniture is free, wrist info hides |
-| `quests` | autoload `Quests` | Linear step quests that count `Events.reported` facts, give rewards, chain | No instructions or rewards |
-| `training` | autoload `Training` | Per-skill difficulty (2-down / 1-up staircase) and a JSONL research log in `user://metrics/` | Fixed easiest difficulty, no log |
-| `vision` | autoload `Vision` + `VisionOrb` | Spirit "visual abilities": contrast, colour, fog and target outline | Orbs do nothing |
-| `voice` | autoload `Voice` | Plays instruction clips. The only audio seam: swap in a Wwise/FMOD bridge here | Subtitles only |
-| `placement` | scene nodes | `HomeLayout` (saved furniture), `DecorBoard` (buy and place), `Placeable` (settle on floor) | Delete the nodes |
-| `creatures` | scene nodes | `Catchable` (touch to catch → fact, trial, item), `Wander` (adaptive flight) | Delete the nodes |
+**Dependencies go one way:** `core` ← `player` / `components` ← `modules` ← `content` / `levels`.
+**Modules never call each other.** They emit or listen on `Events`, or ask `Game.module(&"Name")`, which returns `null` when that module is off.
+To switch a module off, untick its autoload in *Project Settings → Globals*. The game still runs without it.
 
-**Switching a module off:** untick its autoload in *Project Settings → Globals*. The game still runs.
-**Removing it for good:** delete its folder and its nodes in levels.
 
-### The shared contract (`core/events.gd`)
+| Module      | Does                                                                             |
+| ----------- | -------------------------------------------------------------------------------- |
+| `save`      | Saves any node with`save_state()` / `load_state()` to `user://saves/<slot>.json` |
+| `inventory` | Item id → count, filled from`reward_granted`                                    |
+| `quests`    | Step quests that count`reported` facts and give rewards                          |
+| `training`  | Adaptive difficulty per skill and a research log in`user://metrics/`             |
+| `vision`    | Spirit abilities (contrast, colour, fog, target outline) via`VisionOrb`          |
+| `voice`     | Plays instruction clips; the only audio seam                                     |
+| `placement` | Scene nodes:`HomeLayout`, `DecorBoard`, `Placeable`                              |
+| `creatures` | Scene nodes:`Catchable`, `Wander`                                                |
 
-| Signal | Emitted by | Used by |
-|---|---|---|
-| `reported(what, id, data)`, via `Events.report(&"caught", &"butterfly_blue")` | anything: grab, press, enter, catch, place, use | Quests (progress), Training (log) |
-| `instruction(text, voice)`, via `Events.say(...)` | Quests, DecorBoard | Subtitle, Voice |
-| `reward_granted(item, n)` | Quests, Catchable | Inventory |
-| `trial_ended(skill, success, data)` | Catchable | Training |
-| `level_changing` / `level_changed` | Game | Fader, Vision, Quests |
-| `save_requested` | Quests, Game (headset menu / stop) | Save |
+**The signals (`core/events.gd`):**
 
-Facts are written `what:id`, and quest steps match them exactly or with `what:*`.
-Facts in use today: `entered:<level or zone>`, `grabbed:<id>`, `pressed:<id>`, `caught:<id>`,
-`escaped:<id>`, `placed:<item>`, `used:<spirit>`, `asked:help`.
 
-### How interaction works
+| Signal                                                                   | From → To                            |
+| ------------------------------------------------------------------------ | ------------------------------------- |
+| `reported(what, id)`, e.g. `Events.report(&"caught", &"butterfly_blue")` | anything → Quests, Training          |
+| `instruction(text, voice)` via `Events.say()`                            | Quests, DecorBoard → Subtitle, Voice |
+| `reward_granted(item, n)`                                                | Quests, Catchable → Inventory        |
+| `trial_ended(skill, success)`                                            | Catchable → Training                 |
+| `level_changing` / `level_changed`                                       | Game → Fader, Vision, Quests         |
+| `save_requested`                                                         | Quests, Game → Save                  |
 
-Interaction is duck-typed, so objects never reference the player:
+Facts look like `what:id` (`caught:butterfly`, `entered:backyard`); quest steps match them exactly or with `what:*`.
 
-- A **hand** (`player/hand.gd`) calls `touch(hand)` on any area it enters, and `grab()` / `release()` on `Grabbable` bodies.
-- The **head** calls `player_entered(player)` on any area it enters (doors and zones).
-- Desktop mode drives the *same* hand, so everything works with mouse and keyboard.
+**Interaction** is duck-typed, so objects never reference the player: a hand calls `touch(hand)` on areas it enters
+and `grab()` / `release()` on `Grabbable`s; the head calls `player_entered(player)` on doors and zones.
 
-To replace the rig (with Godot XR Tools, for example), point `Game.PLAYER_SCENE` at it and keep those three calls.
+## How to add things
 
-## Common tasks
+- **Quest:** a `QuestDef` in `content/quests/` with steps like `caught:butterfly ×3`. No code.
+- **Item / furniture:** an `ItemDef` in `content/items/<id>.tres`. Furniture scenes are a `Grabbable` with a `Placeable` child; add the id to the `DecorBoard`.
+- **Creature:** copy `content/creatures/butterfly.tscn`. Quest targets go in the `vision_target` group.
+- **Level:** a `Node3D` with `core/level.gd`, a `Marker3D` named `Spawn`, and doors from `components/door.tscn`.
+- **Saved state:** add `save_state()` / `load_state()` to any node.
 
-- **New quest:** create a `QuestDef` resource in `content/quests/` (the file name is the id). Add steps such as
-  `caught:butterfly ×3`, set `start_on = "entered:backyard"`, rewards and `next`. No code needed.
-- **New item / furniture:** an `ItemDef` in `content/items/<id>.tres`. For furniture, its `scene` is a
-  `Grabbable` (release mode STAY) with a `Placeable` child, origin at the bottom. Add the id to the `DecorBoard`.
-- **New creature:** copy `content/creatures/butterfly.tscn` and change the id and mesh. For a quest target, add it to the `vision_target` group.
-- **New spirit ability:** a `VisionProfile` in `content/vision/`, used by a `VisionOrb`.
-- **New level:** a root `Node3D` using `core/level.gd`, a `Marker3D` named `Spawn`, a `WorldEnvironment`, and doors from `components/door.tscn`.
-- **New saved state:** add `save_state()` and `load_state()` to any node. Nothing else is needed.
-- **Per-child profile:** `Save.use_slot("child_07")`, or launch with `-- --slot=child_07`.
-
-## Known limits / next steps
-
-- Visual effects (Environment adjustments, outline) are cheap but **not yet measured on Quest 3**.
-- No real art, audio or voice clips yet (`QuestStep.voice` is ready for them).
-- Furniture can't be put back into the inventory yet. There is no shop, pets or spirit collection yet.
-- Difficulty uses a placeholder staircase; trial definitions need researcher input.
-- Smooth locomotion has a simple wall check, not full body collision. Comfort options (vignette, teleport-only) to decide with the team.
+**Not done yet:** real art, audio and voice; researcher-defined training trials (placeholders now); comfort options.

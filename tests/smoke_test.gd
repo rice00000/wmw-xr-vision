@@ -1,6 +1,6 @@
 extends Node
 ## Headless smoke test of the first-playable loop. Run:
-##   godot --headless --path . res://tests/smoke_test.tscn -- --slot=smoke_test
+##   godot --headless --xr-mode off --path . res://tests/smoke_test.tscn -- --slot=smoke_test
 ## Uses its own save slot, so it never touches real progress. Exit code 0 = all passed.
 
 var _failures := 0

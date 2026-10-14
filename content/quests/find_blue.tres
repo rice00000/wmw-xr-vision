@@ -1,0 +1,18 @@
+[gd_resource type="Resource" script_class="QuestDef" format=3]
+
+[ext_resource type="Script" path="res://modules/quests/quest_def.gd" id="1_quest"]
+[ext_resource type="Script" path="res://modules/quests/quest_step.gd" id="2_step"]
+
+[sub_resource type="Resource" id="Step_1"]
+script = ExtResource("2_step")
+event = "caught:butterfly_blue"
+instruction = "Somewhere in the garden is a BLUE butterfly. Can you find it? Touch a spirit if you need help seeing."
+
+[resource]
+script = ExtResource("1_quest")
+title = "The Blue Butterfly"
+start_on = "entered:backyard"
+steps = Array[ExtResource("2_step")]([SubResource("Step_1")])
+rewards = Dictionary[StringName, int]({&"magic_stone": 1, &"coin": 5})
+completed_text = "You found it! You earned a Magic Stone."
+next = &"decorate"

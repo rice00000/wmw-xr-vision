@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://shared/materials/stem.tres" id="1_stem"]
+[ext_resource type="Material" path="res://shared/materials/flower_red.tres" id="2_head"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_stem"]
+top_radius = 0.012
+bottom_radius = 0.015
+height = 0.5
+radial_segments = 6
+rings = 1
+
+[sub_resource type="SphereMesh" id="SphereMesh_head"]
+radius = 0.07
+height = 0.1
+radial_segments = 10
+rings = 5
+
+[node name="Flower" type="Node3D"]
+
+[node name="Stem" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_stem")
+surface_material_override/0 = ExtResource("1_stem")
+
+[node name="Head" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.52, 0)
+cast_shadow = 0
+mesh = SubResource("SphereMesh_head")
+surface_material_override/0 = ExtResource("2_head")

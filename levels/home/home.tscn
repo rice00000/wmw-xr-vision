@@ -1,0 +1,119 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://core/level.gd" id="1_level"]
+[ext_resource type="Material" path="res://shared/materials/floor.tres" id="2_floor"]
+[ext_resource type="Material" path="res://shared/materials/wall.tres" id="3_wall"]
+[ext_resource type="Material" path="res://shared/materials/wood.tres" id="4_wood"]
+[ext_resource type="Material" path="res://shared/materials/ball.tres" id="5_ball"]
+[ext_resource type="Script" path="res://components/grabbable.gd" id="6_grab"]
+[ext_resource type="PackedScene" path="res://components/touch_button.tscn" id="7_button"]
+[ext_resource type="PackedScene" path="res://components/door.tscn" id="8_door"]
+[ext_resource type="Script" path="res://modules/placement/home_layout.gd" id="9_layout"]
+[ext_resource type="Script" path="res://modules/placement/decor_board.gd" id="10_board"]
+
+[sub_resource type="Environment" id="Environment_home"]
+background_mode = 1
+background_color = Color(0.55, 0.72, 0.88, 1)
+ambient_light_source = 2
+ambient_light_color = Color(1, 0.97, 0.92, 1)
+ambient_light_energy = 0.6
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_ball"]
+radius = 0.08
+
+[sub_resource type="SphereMesh" id="SphereMesh_ball"]
+radius = 0.08
+height = 0.16
+
+[node name="Home" type="Node3D"]
+script = ExtResource("1_level")
+level_id = &"home"
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_home")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5736, 0.8192, 0, -0.8192, 0.5736, 0, 3, 0)
+light_energy = 0.8
+
+[node name="Spawn" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2)
+
+[node name="Geometry" type="Node3D" parent="."]
+
+[node name="Floor" type="CSGBox3D" parent="Geometry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+use_collision = true
+size = Vector3(8, 0.2, 8)
+material = ExtResource("2_floor")
+
+[node name="WallNorth" type="CSGBox3D" parent="Geometry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, -4)
+use_collision = true
+size = Vector3(8, 2.6, 0.2)
+material = ExtResource("3_wall")
+
+[node name="WallSouth" type="CSGBox3D" parent="Geometry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 4)
+use_collision = true
+size = Vector3(8, 2.6, 0.2)
+material = ExtResource("3_wall")
+
+[node name="WallWest" type="CSGBox3D" parent="Geometry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -4, 1.3, 0)
+use_collision = true
+size = Vector3(0.2, 2.6, 8)
+material = ExtResource("3_wall")
+
+[node name="WallEast" type="CSGBox3D" parent="Geometry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 1.3, 0)
+use_collision = true
+size = Vector3(0.2, 2.6, 8)
+material = ExtResource("3_wall")
+
+[node name="Table" type="CSGBox3D" parent="Geometry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 0.2)
+use_collision = true
+size = Vector3(1.2, 0.6, 0.7)
+material = ExtResource("4_wood")
+
+[node name="Ball" type="RigidBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.69, 0.2)
+script = ExtResource("6_grab")
+id = &"ball"
+
+[node name="Shape" type="CollisionShape3D" parent="Ball"]
+shape = SubResource("SphereShape3D_ball")
+
+[node name="Mesh" type="MeshInstance3D" parent="Ball"]
+mesh = SubResource("SphereMesh_ball")
+surface_material_override/0 = ExtResource("5_ball")
+
+[node name="HelloButton" parent="." instance=ExtResource("7_button")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.3, 0.75, 0.2)
+id = &"hello"
+text = "Hello!"
+
+[node name="DoorTraining" parent="." instance=ExtResource("8_door")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 0, -3.6)
+id = &"door_training"
+target_level = "res://levels/training/training.tscn"
+label = "Training Room"
+
+[node name="DoorBackyard" parent="." instance=ExtResource("8_door")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 0, -3.6)
+id = &"door_backyard"
+target_level = "res://levels/backyard/backyard.tscn"
+label = "Backyard"
+
+[node name="HomeLayout" type="Node3D" parent="."]
+script = ExtResource("9_layout")
+
+[node name="DecorBoard" type="Node3D" parent="." node_paths=PackedStringArray("layout", "spawn_point")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 3.85, 1.1, 0.5)
+script = ExtResource("10_board")
+layout = NodePath("../HomeLayout")
+spawn_point = NodePath("../FurnitureSpawn")
+
+[node name="FurnitureSpawn" type="Marker3D" parent="."]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 2.8, 0, 0.5)

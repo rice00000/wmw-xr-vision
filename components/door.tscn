@@ -1,0 +1,35 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://components/zone.gd" id="1_zone"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_door"]
+size = Vector3(1, 2, 0.6)
+
+[sub_resource type="BoxMesh" id="BoxMesh_door"]
+size = Vector3(1, 2, 0.08)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_door"]
+albedo_color = Color(1, 0.82, 0.15, 1)
+emission_enabled = true
+emission = Color(1, 0.82, 0.15, 1)
+emission_energy_multiplier = 0.25
+
+[node name="Door" type="Area3D"]
+script = ExtResource("1_zone")
+id = &"door"
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+shape = SubResource("BoxShape3D_door")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -0.3)
+mesh = SubResource("BoxMesh_door")
+surface_material_override/0 = SubResource("StandardMaterial3D_door")
+
+[node name="Label" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.25, -0.25)
+pixel_size = 0.002
+font_size = 48
+outline_size = 12
+text = "Door"

@@ -1,0 +1,42 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://components/grabbable.gd" id="1_grab"]
+[ext_resource type="Script" path="res://modules/placement/placeable.gd" id="2_place"]
+[ext_resource type="Material" path="res://shared/materials/wood.tres" id="3_main"]
+[ext_resource type="Material" path="res://shared/materials/stem.tres" id="4_accent"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_body"]
+size = Vector3(0.4, 0.8, 0.4)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_pot"]
+top_radius = 0.16
+bottom_radius = 0.12
+height = 0.3
+
+[sub_resource type="SphereMesh" id="SphereMesh_leaves"]
+radius = 0.25
+height = 0.45
+
+[node name="Plant" type="RigidBody3D"]
+freeze = true
+script = ExtResource("1_grab")
+release_mode = 1
+id = &"plant"
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+shape = SubResource("BoxShape3D_body")
+
+[node name="Pot" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.15, 0)
+mesh = SubResource("CylinderMesh_pot")
+surface_material_override/0 = ExtResource("3_main")
+
+[node name="Leaves" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, 0)
+mesh = SubResource("SphereMesh_leaves")
+surface_material_override/0 = ExtResource("4_accent")
+
+[node name="Placeable" type="Node" parent="."]
+script = ExtResource("2_place")
+item_id = &"plant"

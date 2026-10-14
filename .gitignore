@@ -1,0 +1,24 @@
+# Godot 4+ specific ignores
+.godot/
+
+# Android build template (installed automatically by tools/quest.ps1 build)
+/android/
+
+# keystore
+export_credentials.cfg
+
+# build output
+/build/
+*.apk
+
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+*.ps1
+*.cmd
+
+# OpenXR Vendors plugin (107 MB of binaries): install from the Asset Library, see README
+/addons/godotopenxrvendors/

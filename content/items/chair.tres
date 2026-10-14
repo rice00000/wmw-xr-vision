@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ItemDef" format=3]
+
+[ext_resource type="Script" path="res://core/item_def.gd" id="1_item"]
+[ext_resource type="PackedScene" path="res://content/items/chair.tscn" id="2_scene"]
+
+[resource]
+script = ExtResource("1_item")
+display_name = "Chair"
+scene = ExtResource("2_scene")
+cost = Dictionary[StringName, int]({&"magic_stone": 1})

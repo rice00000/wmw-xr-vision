@@ -1,0 +1,121 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://player/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://player/subtitle.gd" id="2_subtitle"]
+[ext_resource type="Script" path="res://player/fader.gd" id="3_fader"]
+[ext_resource type="Script" path="res://player/hand.gd" id="4_hand"]
+[ext_resource type="Script" path="res://player/wrist_info.gd" id="5_wrist"]
+[ext_resource type="Script" path="res://player/locomotion.gd" id="6_locomotion"]
+[ext_resource type="Script" path="res://player/teleport.gd" id="7_teleport"]
+[ext_resource type="Script" path="res://player/desktop_controls.gd" id="8_desktop"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_head"]
+radius = 0.15
+
+[sub_resource type="SphereMesh" id="SphereMesh_fade"]
+radius = 0.25
+height = 0.5
+radial_segments = 16
+rings = 8
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_hand"]
+radius = 0.07
+
+[sub_resource type="SphereMesh" id="SphereMesh_hand"]
+radius = 0.035
+height = 0.07
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hand"]
+albedo_color = Color(1, 0.8, 0.65, 1)
+roughness = 0.6
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_marker"]
+top_radius = 0.25
+bottom_radius = 0.25
+height = 0.02
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_marker"]
+shading_mode = 0
+albedo_color = Color(0.3, 0.85, 1, 1)
+
+[node name="Player" type="XROrigin3D"]
+script = ExtResource("1_player")
+
+[node name="Camera" type="XRCamera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.3, 0)
+current = true
+near = 0.05
+
+[node name="HeadSensor" type="Area3D" parent="Camera"]
+
+[node name="Shape" type="CollisionShape3D" parent="Camera/HeadSensor"]
+shape = SubResource("SphereShape3D_head")
+
+[node name="Subtitle" type="Label3D" parent="Camera"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.12, -0.8)
+pixel_size = 0.0006
+render_priority = 10
+outline_render_priority = 9
+no_depth_test = true
+font_size = 48
+outline_size = 14
+autowrap_mode = 3
+width = 900.0
+script = ExtResource("2_subtitle")
+
+[node name="Fader" type="MeshInstance3D" parent="Camera"]
+cast_shadow = 0
+mesh = SubResource("SphereMesh_fade")
+script = ExtResource("3_fader")
+
+[node name="LeftController" type="XRController3D" parent="."]
+tracker = &"left_hand"
+
+[node name="Hand" type="Area3D" parent="LeftController"]
+script = ExtResource("4_hand")
+
+[node name="Shape" type="CollisionShape3D" parent="LeftController/Hand"]
+shape = SubResource("SphereShape3D_hand")
+
+[node name="Mesh" type="MeshInstance3D" parent="LeftController/Hand"]
+cast_shadow = 0
+mesh = SubResource("SphereMesh_hand")
+surface_material_override/0 = SubResource("StandardMaterial3D_hand")
+
+[node name="WristInfo" type="Label3D" parent="LeftController"]
+transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0.04, 0.08)
+pixel_size = 0.0005
+font_size = 40
+outline_size = 10
+horizontal_alignment = 0
+script = ExtResource("5_wrist")
+
+[node name="RightController" type="XRController3D" parent="."]
+tracker = &"right_hand"
+
+[node name="Hand" type="Area3D" parent="RightController"]
+script = ExtResource("4_hand")
+
+[node name="Shape" type="CollisionShape3D" parent="RightController/Hand"]
+shape = SubResource("SphereShape3D_hand")
+
+[node name="Mesh" type="MeshInstance3D" parent="RightController/Hand"]
+cast_shadow = 0
+mesh = SubResource("SphereMesh_hand")
+surface_material_override/0 = SubResource("StandardMaterial3D_hand")
+
+[node name="Locomotion" type="Node" parent="."]
+script = ExtResource("6_locomotion")
+
+[node name="Teleport" type="Node3D" parent="."]
+script = ExtResource("7_teleport")
+
+[node name="Marker" type="MeshInstance3D" parent="Teleport"]
+top_level = true
+visible = false
+cast_shadow = 0
+mesh = SubResource("CylinderMesh_marker")
+surface_material_override/0 = SubResource("StandardMaterial3D_marker")
+
+[node name="DesktopControls" type="Node" parent="."]
+script = ExtResource("8_desktop")

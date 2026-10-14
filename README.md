@@ -1,6 +1,6 @@
 # XRVision
 
-A VR magical adventure in which children who have recently regained sight explore, catch creatures, finish quests and decorate their home, with visual training built into the play.
+A VR magical adventure in which children who have recently regained sight explore, catch creatures, finish quests and decorate their home, with visual training built into the play. Ideas are still open, so the project is built to be extended.
 
 Godot **4.7.2**, GDScript, Mobile renderer, OpenXR.
 

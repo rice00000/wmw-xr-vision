@@ -1,9 +1,8 @@
 extends Node
 ## Player settings (autoload "Settings"): comfort, sound, reading aloud.
 ##
-## Not part of a save slot's progress, so settings survive "start over".
-## Stored in user://settings.cfg, or user://settings_<slot>.cfg when launched
-## with `-- --slot=<name>`, so the test suite never touches real settings.
+## One set per player, in their profile folder (settings.cfg; see Profile), so
+## each child keeps their own and Start over puts them back to the defaults.
 ## Read with [method value]; listen to [signal changed] to follow edits live.
 ## The child edits them on the wrist menu's Settings page; Audio follows the
 ## volumes and read_aloud, the player rig is expected to follow the rest.
@@ -21,22 +20,19 @@ const DEFAULTS := {
 }
 
 var _values: Dictionary = DEFAULTS.duplicate()
-var _path := "user://settings.cfg"
 
 
 func _ready() -> void:
-	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--slot="):
-			_path = "user://settings_%s.cfg" % arg.trim_prefix("--slot=")
+	Events.profile_opened.connect(func(_wiped: bool) -> void: reload())
 	reload()
 
 
-## Re-reads the settings file, announcing every value that differs. A missing
-## key keeps its default, so an older file never leaves a setting undefined.
+## Re-reads the player's settings file, announcing every value that differs. A
+## missing file or key is the default.
 func reload() -> void:
 	var file := ConfigFile.new()
 	var stored := {}
-	if file.load(_path) == OK:
+	if file.load(Profile.path(Profile.SETTINGS_FILE)) == OK:
 		for key: StringName in DEFAULTS:
 			stored[key] = file.get_value("settings", key, DEFAULTS[key])
 	for key: StringName in DEFAULTS:
@@ -71,4 +67,4 @@ func _write() -> void:
 	var file := ConfigFile.new()
 	for key: StringName in _values:
 		file.set_value("settings", key, _values[key])
-	file.save(_path)
+	file.save(Profile.path(Profile.SETTINGS_FILE))

@@ -10,7 +10,7 @@ extends Node3D
 ## than [member fall_behind] metres behind is waited for and beckoned. With no
 ## place it stays a few metres away, never closer than [member too_close], and
 ## steps aside when the child walks towards it. It "talks" (bobs, staff glowing)
-## while an instruction is up.
+## while the Narrator is saying a line.
 ##
 ## When the current step waits for "grabbed:<ball_id>" it holds out a glowing
 ## ball for the child to take — the welcome's first lesson.
@@ -67,7 +67,6 @@ var _place_id: StringName = &""
 var _path := PackedVector3Array()
 var _ball: Grabbable
 var _offering := false
-var _talk_until := 0
 var _replan_at := 0
 var _poofing := false
 ## A new goal is waiting to be planned. Planning happens on a physics frame, once
@@ -83,14 +82,11 @@ var _rests: Dictionary[StringName, Basis] = {}
 
 func _ready() -> void:
 	Events.goal_changed.connect(_on_goal_changed)
-	Events.instruction.connect(_on_instruction)
 	for pivot_name: StringName in [&"ArmLeft", &"ArmRight"]:
 		var pivot := _pivot(pivot_name)
 		if pivot:
 			_rests[pivot_name] = pivot.basis
-	var tasks := Game.module(&"Tasks")
-	if tasks:
-		_on_goal_changed.call_deferred(tasks.goal(), tasks.goal_place())
+	(func() -> void: _on_goal_changed(Events.goal)).call_deferred() # the goal as it is then, not now
 
 
 ## The [Place] id it is leading to, or &"" when it is keeping the child company.
@@ -112,31 +108,20 @@ func ball() -> Grabbable:
 	return _ball if is_instance_valid(_ball) else null
 
 
+## The Narrator is saying a line: it is this character's voice.
 func is_talking() -> bool:
-	return Time.get_ticks_msec() < _talk_until
+	return Narrator.current != null and not Narrator.is_paused()
 
 
-func _on_goal_changed(_text: String, place: StringName) -> void:
-	if not is_inside_tree():
-		return # the old level, between being swapped out and freed
-	var found := Place.find(get_tree(), place) if not place.is_empty() else null
-	var id: StringName = place if found else &""
-	var offer := _wants_ball()
+func _on_goal_changed(goal: Goal) -> void:
+	var found := Place.find(get_tree(), goal.place) if not goal.place.is_empty() else null
+	var id: StringName = goal.place if found else &""
+	var offer := ball_scene != null and goal.waiting_for == "grabbed:%s" % ball_id
 	if id != _place_id or offer != _offering:
 		_place_id = id
 		_offering = offer
 		_dirty = true
 	_update_ball()
-
-
-func _on_instruction(text: String, _voice: AudioStream) -> void:
-	if not text.is_empty():
-		_talk_until = Time.get_ticks_msec() + clampi(text.length() * 60, 1500, 8000)
-
-
-func _wants_ball() -> bool:
-	var tasks := Game.module(&"Tasks")
-	return tasks != null and ball_scene != null and tasks.waiting_for() == "grabbed:%s" % ball_id
 
 
 # -- where to go --------------------------------------------------------------

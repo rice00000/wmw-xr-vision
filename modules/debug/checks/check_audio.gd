@@ -18,9 +18,11 @@ func _arm() -> void:
 func _on_press(id: StringName) -> void:
 	if id != &"say":
 		return
+	update("waiting for the guide to finish talking")
+	await Narrator.wait_quiet() # a line is said in its turn, never over another
 	var spoken_before: int = mod().spoken
 	var cued_before: int = mod().cued
-	Events.say("Audio test: a beep should come from your right.", _beep)
+	Narrator.say("Audio test: a beep should come from your right.", _beep)
 	Events.play_at(_beep, global_position + Vector3(0.6, 1.2, 0.0))
 	var said: bool = mod().spoken == spoken_before + 1
 	var heard: bool = mod().cued > cued_before
@@ -34,4 +36,4 @@ func _on_press(id: StringName) -> void:
 
 
 func auto() -> void:
-	_on_press(&"say")
+	await _on_press(&"say")

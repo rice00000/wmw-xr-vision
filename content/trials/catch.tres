@@ -45,12 +45,12 @@ fixed = 12.0
 [resource]
 script = ExtResource("1_trial")
 title = "Catch the butterfly"
-skill = &"motion"
+visual_skill = &"motion"
 axes = Array[ExtResource("2_axis")]([SubResource("Axis_speed"), SubResource("Axis_size"), SubResource("Axis_distance"), SubResource("Axis_contrast"), SubResource("Axis_time")])
 notes = "One butterfly a round, in front of the child sitting on the log at the
 meadow station. Caught = success, flew away after time_limit = fail.
 
-Driven axis: speed, and only speed. Following a moving target is the skill;
+Driven axis: speed, and only speed. Following a moving target is the visual skill;
 how big, how far and how faint it is stay pinned so a miss is attributable to
 one thing. Pin the others from the debug menu to test a different point.
 

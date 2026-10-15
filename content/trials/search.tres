@@ -29,7 +29,7 @@ fixed = 0.65
 [resource]
 script = ExtResource("1_task")
 title = "Find the object"
-skill = &"search"
+visual_skill = &"search"
 axes = Array[ExtResource("2_axis")]([SubResource("Axis_clutter"), SubResource("Axis_overlap"), SubResource("Axis_contrast")])
 notes = "Objects in clutter (design doc section 3).
 

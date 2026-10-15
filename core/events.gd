@@ -3,13 +3,14 @@ extends Node
 ##
 ## This is the only contract modules share. Emitters never know who listens,
 ## so any module can be switched off without breaking the others.
+##
+## It also holds one piece of state: [member goal], the latest snapshot of what
+## the child should do, so a station or guide that arrives with a new level reads
+## where things stand instead of waiting to be told again.
 
 ## A gameplay fact: something was caught, entered, grabbed, placed, pressed...
 ## Tasks count these and Training logs them. Emit with [method report].
 signal reported(what: StringName, id: StringName, data: Dictionary)
-
-## Show / say an instruction to the player (subtitle + optional voice clip).
-signal instruction(text: String, voice: AudioStream)
 
 ## Play a stream the caller is holding, where it happened. Feedback is always paired across
 ## sight and sound, never colour alone, so every visual cue goes out with one of
@@ -19,21 +20,12 @@ signal cue(sound: AudioStream, position: Vector3)
 ## Give the player items: task rewards, caught creatures, pickups.
 signal reward_granted(item_id: StringName, amount: int)
 
-## Ask for measured rounds of [param trial] (a file name in res://content/trials/).
-## Sent by Tasks when a task step names a trial, and answered by the station that
-## runs that trial, which ignores one that is not its own. [param rounds] is how
-## many are still owed (0 = until stopped); -1 withdraws the request (the task was
-## dropped, or a save was loaded over it). [param title] says what the rounds are
-## for, in words for the station's sign (the task's title; empty when withdrawn).
-## Re-sent on every level change and reminder, so the station may arrive late.
-signal trial_requested(trial: StringName, rounds: int, title: String)
-
 ## A measured attempt at a visual task is about to start. [param condition] is a
 ## TrialCondition.to_log() dictionary: everything the round was set up with.
 signal trial_started(trial: StringName, condition: Dictionary)
 
 ## One measured attempt at a visual task is over (drives difficulty + research log).
-signal trial_ended(skill: StringName, success: bool, data: Dictionary)
+signal trial_ended(visual_skill: StringName, success: bool, data: Dictionary)
 
 signal task_started(task_id: StringName)
 signal task_completed(task_id: StringName)
@@ -42,14 +34,22 @@ signal task_completed(task_id: StringName)
 signal level_changing(path: String)
 signal level_changed(level: Node)
 
-## Ask the Save module to write to disk now.
+## Ask the Save module to write to disk now. It also writes by itself after
+## every fact and every round, so only a moment with neither needs this.
 signal save_requested
 
-## What the child should do now, and where. [param place] is a [Place] id in the
-## world (empty = right here / anywhere). Sent by Tasks whenever the current step
-## changes, after a load, and on a reminder; empty [param text] = nothing to do.
-## The guide walks to [param place]; the wrist shows [param text].
-signal goal_changed(text: String, place: StringName)
+## Someone else is about to play, or this player starts over (Profile): write
+## what you hold and drop everything the world was doing. The level goes next.
+signal profile_closing
+## The new profile's files are in place: load from them. [param wiped] = it was
+## just wiped (Start over, the Test Room). The first level is built right after.
+signal profile_opened(wiped: bool)
+
+## The goal changed: what the child should do now, where, and how far along.
+## Sent by Tasks only; [member goal] holds the same snapshot for late arrivals.
+## The guide walks to its place, the wrist shows its text, the station whose
+## trial it names runs rounds.
+signal goal_changed(goal: Goal)
 
 ## Something the child did was judged. [param kind] is &"good", &"bad" or &"reward".
 ## One signal gives all three senses: Audio plays row "feedback.<kind>", the player
@@ -61,7 +61,8 @@ signal feedback(kind: StringName, position: Vector3)
 ## Handled by Audio (text-to-speech when the read_aloud setting is on).
 signal read_aloud(text: String)
 
-## The wrist menu opened or closed. While it is open the game is paused.
+## A modal UI (ordinary menu or Debug) opened or closed. Only one is open;
+## while open, play pauses and the wrist and guide subtitles hide.
 signal menu_toggled(open: bool)
 
 ## Take one [param item_id] out of the inventory and put it in the player's hand.
@@ -69,13 +70,20 @@ signal menu_toggled(open: bool)
 ## which moves the item from the inventory into the world.
 signal place_requested(item_id: StringName)
 
+## The current goal. Never null; an empty [member Goal.task] = nothing to do.
+var goal := Goal.new()
+
 
 func report(what: StringName, id: StringName = &"", data: Dictionary = {}) -> void:
 	reported.emit(what, id, data)
 
 
-func say(text: String, voice: AudioStream = null) -> void:
-	instruction.emit(text, voice)
+## Publishes [param new_goal] when it differs from the current one. Tasks only.
+func set_goal(new_goal: Goal) -> void:
+	if new_goal.equals(goal):
+		return
+	goal = new_goal
+	goal_changed.emit(goal)
 
 
 func play_at(sound: AudioStream, position: Vector3) -> void:

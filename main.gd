@@ -7,6 +7,7 @@ extends Node3D
 func _ready() -> void:
 	add_child(load(Game.PLAYER_SCENE).instantiate())
 	Game.level_root = $Level
+	Game.home_level = first_level
 	Game.change_level(_first())
 
 

@@ -19,7 +19,7 @@ func _on_press(id: StringName) -> void:
 			var wanted := value
 			mod().write()
 			value = -1 # clobber it: only a real restore can put it back
-			mod().reload() # not use_slot(): that writes first, which would cheat
+			mod().reload() # re-read without writing first, which would cheat
 			if value == wanted:
 				pass_now("counter %d came back off disk" % value)
 			else:

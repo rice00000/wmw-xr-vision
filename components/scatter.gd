@@ -4,7 +4,7 @@ extends Node3D
 ## them (visual clutter).
 ##
 ## On its own it fills a level once, with the amount following the player's
-## Training level for [member skill], so busier scenes come as the child improves.
+## Training level for [member visual_skill], so busier scenes come as the child improves.
 ## A task drives it per round with [method place] instead, which also returns what
 ## it placed and can crowd the objects together.
 
@@ -12,8 +12,8 @@ extends Node3D
 @export var radius := 4.0
 @export var min_count := 10
 @export var max_count := 40
-## Training skill that sets the amount. Empty = always [member min_count].
-@export var skill: StringName = &""
+## Training visual skill that sets the amount. Empty = always [member min_count].
+@export var visual_skill: StringName = &""
 ## Same layout every time when non-zero.
 @export var random_seed := 0
 ## Smallest gap between two objects, at crowding 0.
@@ -92,8 +92,8 @@ func occlude(node: Node3D, anchor: Node3D, fraction := 0.45) -> void:
 func _auto_count() -> int:
 	var difficulty := 0.0
 	var training := Game.module(&"Training")
-	if training and not skill.is_empty():
-		difficulty = training.level(skill)
+	if training and not visual_skill.is_empty():
+		difficulty = training.level(visual_skill)
 	return roundi(lerpf(min_count, max_count, difficulty))
 
 

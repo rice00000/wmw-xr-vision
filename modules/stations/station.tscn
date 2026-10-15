@@ -30,7 +30,7 @@ script = ExtResource("3_runner")
 
 [node name="Sign" type="Label3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.1, -1.6)
-pixel_size = 0.0035
+pixel_size = 0.002
 billboard = 1
 double_sided = false
 modulate = Color(0.92, 0.92, 0.95, 1)
@@ -38,6 +38,8 @@ outline_modulate = Color(0, 0, 0, 1)
 text = "Station"
 font_size = 64
 outline_size = 18
+autowrap_mode = 2
+width = 850.0
 
 [node name="Beacon" parent="." instance=ExtResource("4_beacon")]
 visible = false

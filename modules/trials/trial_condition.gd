@@ -8,7 +8,7 @@ extends RefCounted
 
 var trial: StringName = &""
 ## Staircase bucket, from the TrialDef. Trials training the same thing share one.
-var skill: StringName = &""
+var visual_skill: StringName = &""
 ## The difficulty scalar these values were resolved from (0 = easiest).
 var difficulty := 0.0
 ## 0-based round number in this session. Help fades as it grows.
@@ -37,7 +37,7 @@ func values() -> Dictionary[StringName, float]:
 func to_log() -> Dictionary:
 	var entry := {
 		trial = trial,
-		skill = skill,
+		visual_skill = visual_skill,
 		difficulty = difficulty,
 		round = round_index,
 		probe = probe,

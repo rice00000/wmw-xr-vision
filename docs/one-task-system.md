@@ -55,7 +55,8 @@ A trial step was almost free, because the seam already existed: `TrialRunner`
 reports `finished:<trial>` when its round budget is up, and a step already knows
 how to wait for a fact. So a trial step is **not** a second kind of matching —
 it is an ordinary fact step whose key is `finished:<trial>`, plus one side effect
-when the step is entered: `Events.trial_requested(trial, rounds, title)`. The
+when the step is entered: `Events.trial_requested(trial, rounds, title)` (since
+replaced by the published goal: see [state-and-narration.md](state-and-narration.md)). The
 `Station` that runs that trial (the picnic table for `search`, the meadow for
 `catch`) answers; every other station ignores it.
 
@@ -66,7 +67,7 @@ Later (Oct 2026) the one module became three layers, still with one word for
 each thing: `modules/tasks/` (tasks), `modules/trials/` (trials, their defs,
 `Training`, one subfolder per kind of round) and `modules/stations/` (where
 trials are run). Dependencies go one way, **tasks → trials ← stations**: tasks
-read a `TrialDef` to name a task's skills, stations run trials, and neither
+read a `TrialDef` to name a task's visual skills, stations run trials, and neither
 tasks nor trials know stations exist. The smoke test checks it. Switch the `Tasks`
 autoload off and a station with `auto_start` still runs free-play rounds; switch
 `Training` off and rounds still run at the trial's baseline difficulty.

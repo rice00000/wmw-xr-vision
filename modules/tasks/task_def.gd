@@ -48,15 +48,15 @@ var id: StringName:
 		return StringName(resource_path.get_file().get_basename())
 
 
-## Skill ids the task's trial steps train, in step order, without repeats.
-func skills() -> Array[StringName]:
+## Visual skill ids the task's trial steps train, in step order, without repeats.
+func visual_skills() -> Array[StringName]:
 	var found: Array[StringName] = []
 	for step in steps:
 		if step == null or not step.is_trial():
 			continue
 		var trial := TrialDef.find(step.trial)
-		if trial and not found.has(trial.skill):
-			found.append(trial.skill)
+		if trial and not found.has(trial.visual_skill):
+			found.append(trial.visual_skill)
 	return found
 
 

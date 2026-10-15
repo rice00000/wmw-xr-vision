@@ -17,6 +17,9 @@ var player: Node3D
 var level: Node
 ## Where levels are swapped in (set by main.tscn). Null when a level runs on its own (F6).
 var level_root: Node
+## The level a game starts on (set by main.tscn): where a new player, another
+## player and Start over all begin.
+var home_level := ""
 
 var _xr: XRInterface
 var _changing := false
@@ -41,20 +44,38 @@ func module(module_name: StringName) -> Node:
 	return get_tree().root.get_node_or_null(NodePath(String(module_name)))
 
 
-func change_level(path: String) -> void:
+## Fades out, frees the current level and builds [param path]. [param between]
+## runs once the old level is gone and before the new one exists: the moment to
+## swap what the next level will load (another player's files).
+## The Test Room always opens on its own throwaway profile, however it is asked
+## for (the debug panel, a door, [code]--level=testbed[/code]).
+func change_level(path: String, between := Callable()) -> void:
 	if _changing:
+		return
+	if path == Profile.TESTBED and not between.is_valid() and not Profile.is_test_room():
+		Profile.open_test_room()
 		return
 	_changing = true
 	Events.level_changing.emit(path)
 	await get_tree().create_timer(FADE_TIME).timeout
 	if level_root == null:
+		if between.is_valid():
+			between.call()
 		get_tree().change_scene_to_file(path) # standalone level: the next one brings its own player
 	else:
 		if is_instance_valid(level):
 			level_root.remove_child(level)
 			level.queue_free()
+			level = null # no level until the next one registers
+		await get_tree().process_frame # really gone, signal connections and all
+		if between.is_valid():
+			between.call()
 		level_root.add_child(load(path).instantiate())
 	_changing = false
+
+
+func is_changing() -> bool:
+	return _changing
 
 
 ## Pause the game for [param who] ([param on]), or let go of that pause. The tree

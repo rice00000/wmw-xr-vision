@@ -12,7 +12,7 @@ key	sound	options	note
 # note     for people. Ignored.
 #
 # Saving this file takes effect within a second while the game runs from the editor.
-# Mistakes (unknown option, missing clip, duplicate key) are printed at load and fail tools\test.cmd.
+# Mistakes (unknown option, missing clip, duplicate key) are printed at load and fail python tools/test.py.
 # Keys the game sent that are not here are printed as AUDIO_UNMAPPED and listed in the Test Room.
 
 # ===== interface =====

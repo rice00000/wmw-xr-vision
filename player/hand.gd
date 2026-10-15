@@ -10,7 +10,7 @@ extends Area3D
 ## grabbable that [method grab] would pick, and the nearest touchable within
 ## [member reach]. Nothing else, so the light never says more than "near you".
 ## While the tree is paused (wrist menu open) the hand still tracks, but grabs,
-## touches and hover stop; the menu does its own, poking with [method poke_point].
+## touches and hover stop; the menu handles its own controller rays.
 ## A held object waits where it was and is let go of (gently) only once the
 ## world runs again, so nothing is thrown by a menu.
 
@@ -75,24 +75,28 @@ func grab() -> void:
 ## Takes [param body] into this hand where it is, as if it had just been grabbed.
 ## Used by grab() and by things that hand the child an object (placement).
 func hold(body: Grabbable) -> bool:
-	if held or body == null or not body.grab(self):
+	if held or body == null or body.holder:
 		return false
+	# The grabbed callbacks may release or hand off the object immediately.
+	# Finish the hand's state before the body announces the grab.
 	held = body
 	_offset = global_transform.affine_inverse() * body.global_transform
 	_last_position = body.global_position
 	_velocity = Vector3.ZERO
 	_set_hover([])
+	body.grab(self)
 	return true
 
 
 func release() -> void:
 	_release_pending = false
-	if held and is_instance_valid(held):
-		held.release(self, _velocity * throw_strength)
+	var body := held
 	held = null
+	if is_instance_valid(body):
+		body.release(self, _velocity * throw_strength)
 
 
-## The fingertip: where menus and buttons should test for a poke.
+## The fingertip: where the wrist star tests for a touch.
 func poke_point() -> Vector3:
 	return global_position - global_basis.z * poke_reach
 

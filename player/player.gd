@@ -14,6 +14,10 @@ extends XROrigin3D
 
 @onready var camera := $Camera as XRCamera3D
 
+var _menu_down := false
+var _y_down := false
+var _chord_used := false
+
 
 func _enter_tree() -> void:
 	Game.player = self
@@ -27,7 +31,8 @@ func _exit_tree() -> void:
 func _ready() -> void:
 	$Camera/HeadSensor.area_entered.connect(_on_head_entered)
 	for controller: XRController3D in [$LeftController, $RightController]:
-		controller.button_pressed.connect(_on_button_pressed)
+		controller.button_pressed.connect(_on_button_pressed.bind(controller))
+		controller.button_released.connect(_on_button_released.bind(controller))
 
 
 ## Moves the rig so the player's head (not the play-area centre) stands on [param xform].
@@ -42,8 +47,31 @@ func _on_head_entered(area: Area3D) -> void:
 		area.player_entered(self)
 
 
-func _on_button_pressed(action: String) -> void:
-	if action == "by_button": # B / Y: "what should I do?"
+## Menu and Y are release actions until their overlap consumes both as Debug.
+## A chord fires once, in either order, and stays consumed until both are up.
+func _on_button_pressed(action: String, controller: XRController3D) -> void:
+	if controller == $LeftController:
+		if action == "menu_button":
+			_menu_down = true
+		elif action == "by_button":
+			_y_down = true
+		if _menu_down and _y_down and not _chord_used:
+			_chord_used = true
+			Events.report(&"asked", &"debug")
+	elif action == "by_button": # right B still asks immediately
 		Events.report(&"asked", &"help")
-	elif action == "menu_button": # the team's hidden debug panel
-		Events.report(&"asked", &"menu")
+
+
+func _on_button_released(action: String, controller: XRController3D) -> void:
+	if controller != $LeftController:
+		return
+	if action == "menu_button":
+		if _menu_down and not _chord_used:
+			Events.report(&"asked", &"menu")
+		_menu_down = false
+	elif action == "by_button":
+		if _y_down and not _chord_used:
+			Events.report(&"asked", &"help")
+		_y_down = false
+	if not _menu_down and not _y_down:
+		_chord_used = false

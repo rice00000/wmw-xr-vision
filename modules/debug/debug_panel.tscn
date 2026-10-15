@@ -1,0 +1,179 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://components/viewport_ui.gd" id="1_ui"]
+
+[sub_resource type="QuadMesh" id="ScreenMesh"]
+size = Vector2(0.84, 0.66)
+
+[sub_resource type="StyleBoxFlat" id="PanelStyle"]
+bg_color = Color(0.055, 0.07, 0.12, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.42, 0.6, 1)
+corner_radius_top_left = 20
+corner_radius_top_right = 20
+corner_radius_bottom_left = 20
+corner_radius_bottom_right = 20
+
+[sub_resource type="StyleBoxFlat" id="ButtonStyle"]
+content_margin_left = 20.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+bg_color = Color(0.13, 0.19, 0.3, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
+
+[sub_resource type="StyleBoxFlat" id="HoverStyle"]
+content_margin_left = 20.0
+content_margin_top = 12.0
+content_margin_right = 20.0
+content_margin_bottom = 12.0
+bg_color = Color(0.2, 0.31, 0.46, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.65, 0.87, 1, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
+
+[sub_resource type="Theme" id="Theme"]
+default_font_size = 26
+Button/styles/normal = SubResource("ButtonStyle")
+Button/styles/hover = SubResource("HoverStyle")
+Button/styles/pressed = SubResource("HoverStyle")
+PanelContainer/styles/panel = SubResource("PanelStyle")
+
+[node name="DebugPanel" type="Node3D"]
+process_mode = 3
+visible = false
+script = ExtResource("1_ui")
+
+[node name="Screen" type="MeshInstance3D" parent="."]
+cast_shadow = 0
+mesh = SubResource("ScreenMesh")
+
+[node name="Viewport" type="SubViewport" parent="."]
+size = Vector2i(1120, 880)
+disable_3d = true
+physics_object_picking = false
+transparent_bg = true
+gui_embed_subwindows = true
+render_target_update_mode = 0
+
+[node name="Panel" type="PanelContainer" parent="Viewport"]
+offset_right = 1120.0
+offset_bottom = 880.0
+theme = SubResource("Theme")
+
+[node name="Margin" type="MarginContainer" parent="Viewport/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 32
+theme_override_constants/margin_right = 32
+theme_override_constants/margin_top = 32
+theme_override_constants/margin_bottom = 32
+
+[node name="Layout" type="VBoxContainer" parent="Viewport/Panel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="Header" type="HBoxContainer" parent="Viewport/Panel/Margin/Layout"]
+layout_mode = 2
+
+[node name="Title" type="Label" parent="Viewport/Panel/Margin/Layout/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Team debug"
+theme_override_font_sizes/font_size = 36
+
+[node name="dbg_close" type="Button" parent="Viewport/Panel/Margin/Layout/Header"]
+layout_mode = 2
+focus_mode = 0
+text = "Close"
+
+[node name="Tabs" type="HBoxContainer" parent="Viewport/Panel/Margin/Layout"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="dbg_training" type="Button" parent="Viewport/Panel/Margin/Layout/Tabs"]
+layout_mode = 2
+focus_mode = 0
+text = "Training"
+size_flags_horizontal = 3
+
+[node name="dbg_saves" type="Button" parent="Viewport/Panel/Margin/Layout/Tabs"]
+layout_mode = 2
+focus_mode = 0
+text = "Saves & testing"
+size_flags_horizontal = 3
+
+[node name="Pages" type="VBoxContainer" parent="Viewport/Panel/Margin/Layout"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="Training" type="VBoxContainer" parent="Viewport/Panel/Margin/Layout/Pages"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 18
+
+[node name="Summary" type="Label" parent="Viewport/Panel/Margin/Layout/Pages/Training"]
+layout_mode = 2
+text = "No trial running. Sit at a station."
+
+[node name="Axes" type="VBoxContainer" parent="Viewport/Panel/Margin/Layout/Pages/Training"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 12
+
+[node name="Actions" type="HBoxContainer" parent="Viewport/Panel/Margin/Layout/Pages/Training"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="dbg_auto" type="Button" parent="Viewport/Panel/Margin/Layout/Pages/Training/Actions"]
+layout_mode = 2
+focus_mode = 0
+text = "Clear all pins"
+size_flags_horizontal = 3
+
+[node name="dbg_skip" type="Button" parent="Viewport/Panel/Margin/Layout/Pages/Training/Actions"]
+layout_mode = 2
+focus_mode = 0
+text = "Skip trial"
+size_flags_horizontal = 3
+
+[node name="Saves" type="VBoxContainer" parent="Viewport/Panel/Margin/Layout/Pages"]
+visible = false
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="Who" type="Label" parent="Viewport/Panel/Margin/Layout/Pages/Saves"]
+layout_mode = 2
+text = "Playing:"
+
+[node name="dbg_save" type="Button" parent="Viewport/Panel/Margin/Layout/Pages/Saves"]
+layout_mode = 2
+focus_mode = 0
+text = "Next save"
+
+[node name="dbg_new_save" type="Button" parent="Viewport/Panel/Margin/Layout/Pages/Saves"]
+layout_mode = 2
+focus_mode = 0
+text = "New save"
+
+[node name="dbg_tests" type="Button" parent="Viewport/Panel/Margin/Layout/Pages/Saves"]
+layout_mode = 2
+focus_mode = 0
+text = "Open Test Room"
+
+[node name="Hint" type="Label" parent="Viewport/Panel/Margin/Layout"]
+layout_mode = 2
+text = "Point and trigger to select. Menu + Y closes this panel."
+theme_override_font_sizes/font_size = 22
+theme_override_colors/font_color = Color(0.65, 0.74, 0.86, 1)

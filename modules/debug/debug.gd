@@ -1,177 +1,174 @@
 extends Node
-## Debug module (autoload "Debug"): the hidden panel the team sets difficulty from
-## by hand, which the design wants before the staircase takes over.
-##
-## Press the menu button on either controller to show it. It is built from the
-## running trial's [TrialDef] axes, so a new trial or a new axis needs no change
-## here. Pinned axes stop following the staircase until unpinned.
-##
-## Untick this autoload for any build a child will use.
+## Team UI: Menu + left Y, consumed as one chord by Player.
+## Control layout is in debug_panel.tscn; viewport/ray input is shared code.
 
-const BUTTON := preload("res://components/touch_button.tscn")
+const PANEL := preload("res://modules/debug/debug_panel.tscn")
 const STEP := 0.05
-## Where the panel appears relative to the player's head.
-const OFFSET := Vector3(0.0, -0.15, -0.65)
-## The hand-test room, one button away: see docs/hand-testing.md.
-const TESTBED := "res://levels/testbed/testbed.tscn"
 
-var _panel: Node3D
-var _label: Label3D
+var is_open := false
+
+var _panel: ViewportUI
 var _trial: StringName = &""
-## The last round's condition, as TrialCondition.to_log().
 var _round: Dictionary = {}
-var _selected := 0
 
 
 func _ready() -> void:
+	process_mode = Node.PROCESS_MODE_ALWAYS
+	add_to_group(&"xr_ui")
 	Events.reported.connect(_on_reported)
 	Events.trial_started.connect(_on_trial_started)
+	Events.profile_closing.connect(_reset)
+	Events.level_changing.connect(func(_path: String) -> void: _reset())
+	Events.trial_ended.connect(func(_visual_skill: StringName, _success: bool, _data: Dictionary) -> void:
+		_trial = &""
+		_round = {}
+		if is_open:
+			_refresh())
+	var xr := XRServer.find_interface("OpenXR")
+	if xr:
+		xr.pose_recentered.connect(_recentre)
 
 
-func _on_trial_started(trial: StringName, round_condition: Dictionary) -> void:
-	_trial = trial
-	_round = round_condition
+func open() -> void:
+	if is_open or not is_instance_valid(Game.player):
+		return
+	get_tree().call_group(&"xr_ui", &"close")
+	if not is_instance_valid(_panel):
+		_panel = PANEL.instantiate() as ViewportUI
+		Game.player.add_child(_panel)
+		for button: Button in _panel.content.find_children("*", "Button", true, false):
+			button.pressed.connect(_action.bind(StringName(button.name)))
+	is_open = true
 	_refresh()
+	_panel.place()
+	_panel.show()
+	Game.hold_pause(&"debug", true)
+	Events.menu_toggled.emit(true)
+
+
+func close() -> void:
+	if not is_open:
+		return
+	is_open = false
+	if is_instance_valid(_panel):
+		_panel.hide()
+	Game.hold_pause(&"debug", false)
+	Events.menu_toggled.emit(false)
 
 
 func _on_reported(what: StringName, id: StringName, _data: Dictionary) -> void:
-	if what == &"asked" and id == &"menu":
-		_toggle()
-		return
-	if what != &"pressed" or _panel == null or not _panel.visible:
-		return
+	if what == &"asked" and id == &"debug":
+		if is_open:
+			close()
+		else:
+			open()
+
+
+func _on_trial_started(trial: StringName, condition: Dictionary) -> void:
+	_trial = trial
+	_round = condition
+	if is_open:
+		_refresh()
+
+
+func _action(id: StringName) -> void:
+	Events.report(&"pressed", id, {position = _panel.global_position})
 	match id:
-		&"dbg_axis":
-			var names := _axis_names()
-			if not names.is_empty():
-				_selected = (_selected + 1) % names.size()
-		&"dbg_down":
-			_nudge(-STEP)
-		&"dbg_up":
-			_nudge(STEP)
+		&"dbg_close":
+			close()
+		&"dbg_training", &"dbg_saves":
+			_panel.content.find_child("Training", true, false).visible = id == &"dbg_training"
+			_panel.content.find_child("Saves", true, false).visible = id == &"dbg_saves"
 		&"dbg_auto":
 			var training := Game.module(&"Training")
 			if training:
 				training.unpin_all()
+			_refresh_axes()
 		&"dbg_skip":
+			close()
 			for trial in get_tree().get_nodes_in_group(Trial.GROUP):
 				trial.abandon()
+		&"dbg_save":
+			var saves := Profile.saves()
+			if saves.is_empty():
+				saves.append(Profile.new_save())
+			Profile.switch(saves[(saves.find(Profile.current_save()) + 1) % saves.size()])
+		&"dbg_new_save":
+			Profile.switch(Profile.new_save())
 		&"dbg_tests":
-			_panel.visible = false
-			Game.change_level(TESTBED)
-	_refresh()
-
-
-func _toggle() -> void:
-	if _panel == null:
-		_build()
-	if _panel == null:
-		return
-	_panel.visible = not _panel.visible
-	if _panel.visible:
-		_place()
-		_refresh()
-
-
-## Pins the selected axis one step away from where it is now. Steps are in the
-## axis's own units, so a count axis moves in counts and a 0-1 axis in hundredths.
-func _nudge(delta: float) -> void:
-	var training := Game.module(&"Training")
-	var axis := _selected_axis()
-	if training == null or axis == null:
-		return
-	var scale := maxf(absf(axis.easy - axis.hard), 0.001)
-	var value: float = _round.get("axis_%s" % axis.name, axis.resolve(_difficulty()))
-	var low := minf(axis.easy, axis.hard)
-	var high := maxf(axis.easy, axis.hard)
-	training.pin(axis.name, clampf(value + delta * scale, low, high))
+			if Profile.is_test_room():
+				Profile.switch(Profile.current_save())
+			else:
+				Profile.open_test_room()
 
 
 func _refresh() -> void:
-	if _label == null:
-		return
 	var def := TrialDef.find(_trial)
-	if def == null:
-		_label.text = "No trial running.\nStart a level with a TrialRunner."
-		return
+	var summary := _panel.content.find_child("Summary", true, false) as Label
+	summary.text = "%s\nDifficulty %.2f   |   Round %d%s\nChanges apply next round." % [
+		def.title, _round.get("difficulty", 0.0), _round.get("round", 0),
+		"   |   PROBE" if _round.get("probe", false) else "",
+	] if def else "No trial running.\nSit at a station to adjust its axes."
+	(_panel.content.find_child("Who", true, false) as Label).text = "Playing: %s" % Profile.label()
+	(_panel.content.find_child("dbg_tests", true, false) as Button).text = "Return to save" if Profile.is_test_room() else "Open Test Room"
+	_refresh_axes()
+
+
+func _refresh_axes() -> void:
+	var container := _panel.content.find_child("Axes", true, false) as VBoxContainer
+	for row in container.get_children():
+		container.remove_child(row)
+		row.queue_free()
 	var training := Game.module(&"Training")
-	var lines := PackedStringArray([
-		"%s    difficulty %.2f%s" % [
-			def.id, _difficulty(), "" if training else "   (Training off: read-only)"
-		],
-		"round %d%s" % [_round.get("round", 0), "  PROBE" if _round.get("probe", false) else ""],
-		"",
-	])
-	var names := _axis_names()
-	for i in names.size():
-		var axis := def.axes[i]
+	var def := TrialDef.find(_trial)
+	(_panel.content.find_child("dbg_auto", true, false) as Button).disabled = training == null or def == null
+	(_panel.content.find_child("dbg_skip", true, false) as Button).disabled = def == null
+	if def == null:
+		return
+	for axis in def.axes:
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation", 12)
+		container.add_child(row)
+		var label := Label.new()
+		label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		var pinned: bool = training != null and training.is_pinned(axis.name)
-		lines.append("%s %-9s %7.2f  %s" % [
-			">" if i == _selected else " ",
-			axis.name,
-			_round.get("axis_%s" % axis.name, axis.resolve(_difficulty())),
-			"PINNED" if pinned else ("driven" if axis.driven else "fixed"),
-		])
-	_label.text = "\n".join(lines)
+		label.text = "%s   %.2f   %s" % [String(axis.name).capitalize(), _axis_value(axis),
+			"PINNED" if pinned else ("driven" if axis.driven else "fixed")]
+		row.add_child(label)
+		for direction in [-1, 1]:
+			var button := Button.new()
+			button.name = "dbg_%s_%s" % [axis.name, "down" if direction < 0 else "up"]
+			button.text = "-" if direction < 0 else "+"
+			button.custom_minimum_size = Vector2(80, 64)
+			button.focus_mode = Control.FOCUS_NONE
+			button.disabled = training == null
+			row.add_child(button)
+			button.pressed.connect(_nudge.bind(axis, direction, StringName(button.name)))
 
 
-func _difficulty() -> float:
-	return _round.get("difficulty", 0.0)
+func _axis_value(axis: TrialAxis) -> float:
+	var training := Game.module(&"Training")
+	if training:
+		return training.condition(_trial, _round.get("round", 0), _round.get("probe", false)).value(axis.name)
+	return _round.get("axis_%s" % axis.name, axis.resolve(_round.get("difficulty", 0.0)))
 
 
-func _axis_names() -> PackedStringArray:
-	var def := TrialDef.find(_trial)
-	var names := PackedStringArray()
-	if def:
-		for axis in def.axes:
-			if axis:
-				names.append(String(axis.name))
-	return names
+func _nudge(axis: TrialAxis, direction: int, id: StringName) -> void:
+	var training := Game.module(&"Training")
+	var step := maxf(absf(axis.easy - axis.hard), 0.001) * STEP
+	training.pin(axis.name, clampf(_axis_value(axis) + direction * step,
+		minf(axis.easy, axis.hard), maxf(axis.easy, axis.hard)))
+	Events.report(&"pressed", id, {position = _panel.global_position})
+	_refresh_axes()
 
 
-func _selected_axis() -> TrialAxis:
-	var def := TrialDef.find(_trial)
-	if def == null or _selected >= def.axes.size():
-		return null
-	return def.axes[_selected]
+func _recentre() -> void:
+	await get_tree().process_frame
+	if is_open:
+		_panel.place()
 
 
-func _build() -> void:
-	if not is_instance_valid(Game.player):
-		return
-	_panel = Node3D.new()
-	_panel.name = "DebugPanel"
-	_label = Label3D.new()
-	_label.pixel_size = 0.0007
-	_label.font_size = 40
-	_label.outline_size = 12
-	_label.position = Vector3(0.0, 0.22, 0.0)
-	_label.billboard = BaseMaterial3D.BILLBOARD_DISABLED
-	_panel.add_child(_label)
-	var buttons := [
-		[&"dbg_axis", "Axis"], [&"dbg_down", "-"], [&"dbg_up", "+"],
-		[&"dbg_auto", "Auto"], [&"dbg_skip", "Skip"], [&"dbg_tests", "Tests"],
-	]
-	for i in buttons.size():
-		var button := BUTTON.instantiate() as TouchButton
-		button.id = buttons[i][0]
-		button.text = buttons[i][1]
-		button.position = Vector3((i - (buttons.size() - 1) * 0.5) * 0.24, 0.0, 0.0)
-		_panel.add_child(button)
-	Game.player.add_child(_panel)
-	_panel.visible = false
-
-
-## In front of the head, upright, facing the player.
-func _place() -> void:
-	var player := Game.player
-	if not is_instance_valid(player) or not player.has_node(^"Camera"):
-		return
-	var camera := player.get_node(^"Camera") as Node3D
-	var forward := -camera.global_basis.z
-	forward.y = 0.0
-	if forward.length() < 0.01:
-		forward = Vector3.FORWARD
-	var spot := camera.global_position + camera.global_basis * OFFSET
-	_panel.global_position = spot
-	_panel.look_at(spot - forward.normalized(), Vector3.UP)
+func _reset() -> void:
+	close()
+	_trial = &""
+	_round = {}

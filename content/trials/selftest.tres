@@ -30,9 +30,9 @@ fixed = 0.85
 [resource]
 script = ExtResource("1_trial")
 title = "Self-test round"
-skill = &"selftest"
+visual_skill = &"selftest"
 axes = Array[ExtResource("2_axis")]([SubResource("Axis_clutter"), SubResource("Axis_overlap"), SubResource("Axis_contrast")])
-notes = "The Test Room's round, not a child's. Its own skill bucket, so pressing
+notes = "The Test Room's round, not a child's. Its own visual skill bucket, so pressing
 the station's button can never move the staircase the game trains, and its own
 trial id, so its lines are one grep away from the research log.
 

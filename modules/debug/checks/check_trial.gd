@@ -4,7 +4,7 @@ extends ModuleCheck
 ##
 ## A whole trial in miniature on one pedestal: the same Scatter, SearchTrial and
 ## TrialRunner the picnic station uses, running res://content/trials/selftest.tres
-## (its own skill, so hand-testing never moves a child's staircase).
+## (its own visual skill, so hand-testing never moves a child's staircase).
 
 const TRIAL := &"selftest"
 
@@ -36,8 +36,6 @@ func _arm() -> void:
 	_runner.name = "%sRunner" % name
 	_runner.trial = _trial
 	_runner.trial_id = TRIAL
-	_runner.auto_start = false
-	_runner.gap = 0.3
 	_runner.add_child(_trial)
 	_props.add_child(_runner)
 	Events.trial_ended.connect(_on_round_ended)
@@ -53,11 +51,11 @@ func _on_press(id: StringName) -> void:
 	if id != &"go" or _runner == null or _runner.is_running():
 		return
 	_mine = true
-	_runner.start(1)
+	_runner.run(0)
 	update("pick the one the guide names")
 
 
-func _on_round_ended(_skill: StringName, success: bool, data: Dictionary) -> void:
+func _on_round_ended(_visual_skill: StringName, success: bool, data: Dictionary) -> void:
 	if not _mine or StringName(str(data.get("trial", ""))) != TRIAL:
 		return
 	_mine = false

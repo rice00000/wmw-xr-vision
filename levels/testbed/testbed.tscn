@@ -192,7 +192,7 @@ script = ExtResource("15_debug")
 module = &"Debug"
 title = "Debug panel"
 checks = "the hidden difficulty panel opens on the Menu button"
-action = "press the Menu button on either controller"
+action = "hold Menu and press left Y"
 pass_when = "a panel appears in front of your face"
 
 [node name="Check13Menu" type="Node3D" parent="."]

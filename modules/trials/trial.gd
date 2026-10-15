@@ -81,7 +81,7 @@ func finish(success: bool, extra: Dictionary = {}) -> void:
 	data.merge({seconds = seconds(), tries = tries, hint = hint_level}, true)
 	data.merge(extra, true)
 	_teardown()
-	Events.trial_ended.emit(condition.skill, success, data)
+	Events.trial_ended.emit(condition.visual_skill, success, data)
 	ended.emit(success)
 
 

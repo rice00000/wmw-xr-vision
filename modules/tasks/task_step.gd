@@ -8,9 +8,9 @@ extends Resource
 ## [br]- a [b]trial step[/b]: run [member count] measured rounds of [member trial],
 ##   the adaptive, logged kind of round ([Trial], [TrialDef]).
 ##
-## Both finish the same way — a fact on the bus — so nothing in [Tasks] has to
-## know which kind it just ran: a trial step simply waits for "finished:<trial>",
-## which the [Station] running that trial reports when its round budget is up.
+## Both count up to [method needed]: facts reported, or rounds finished. A trial
+## step's goal names the trial, and the [Station] that runs it does so while the
+## child sits there; [Tasks] counts the rounds as they end.
 
 ## Fact to wait for, e.g. "caught:butterfly". "caught:*" matches any id.
 ## Ignored when [member trial] is set.
@@ -34,19 +34,15 @@ func is_trial() -> bool:
 	return not trial.is_empty()
 
 
-## The fact this step ends on.
-func key() -> String:
-	return "finished:%s" % trial if is_trial() else event
-
-
-## How many times [method key] must be reported. A trial step ends on the one
-## "finished" its runner sends after [member count] rounds, so it is always 1.
+## Facts to count, or rounds to run.
 func needed() -> int:
-	return 1 if is_trial() else maxi(count, 1)
+	return maxi(count, 1)
 
 
+## Whether a reported fact counts towards this step. Never for a trial step:
+## rounds are counted off the rounds themselves.
 func matches(what: StringName, id: StringName) -> bool:
-	return TaskStep.key_matches(key(), what, id)
+	return not is_trial() and TaskStep.key_matches(event, what, id)
 
 
 static func key_matches(pattern: String, what: StringName, id: StringName) -> bool:

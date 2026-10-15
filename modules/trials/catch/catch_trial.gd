@@ -2,7 +2,7 @@ class_name CatchTrial
 extends Trial
 ## "Catch the butterfly": one round is one creature, in front of the child, until
 ## it is caught (success) or flies away (fail). Trains following something that
-## moves (skill "motion").
+## moves (visual skill "motion").
 ##
 ## The creature is any scene whose root reports [code]caught(position)[/code] and
 ## [code]escaped(position)[/code] signals and has a [code]time_limit[/code]
@@ -79,7 +79,7 @@ func _setup(round_condition: TrialCondition) -> void:
 	node.connect(&"caught", _on_caught)
 	node.connect(&"escaped", _on_escaped)
 	if round_condition.round_index == 0:
-		Events.say(prompt, prompt_voice)
+		Narrator.say(prompt, prompt_voice, &"trial")
 
 
 func _teardown() -> void:
@@ -104,7 +104,7 @@ func _hint(level: int) -> void:
 	var wander := _child(_creature, "Wander")
 	match level:
 		1:
-			Events.say(prompt, prompt_voice)
+			Narrator.say(prompt, prompt_voice, &"trial")
 			if wander:
 				wander.set(&"speed", float(wander.get(&"speed")) * 0.5)
 		2:

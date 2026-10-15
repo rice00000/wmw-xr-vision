@@ -1,32 +1,44 @@
 extends Node
-## Save module (autoload "Save"). Zero-config persistence.
+## Save module (autoload "Save"): the player's progress, in their profile folder
+## (save.json; see Profile).
 ##
-## Any node with these two methods is saved automatically:
+## Any node with these two methods is saved:
 ##     func save_state() -> Dictionary
 ##     func load_state(data: Dictionary) -> void
 ## It's keyed by its `save_key` property if it has one, else by its node name.
-## State is restored when the node becomes ready, captured when it leaves the tree
-## (e.g. a room unloading) and written to disk on Events.save_requested, pause and quit.
 ##
-## Files are JSON (types kept via JSON.from_native, never objects), one per slot:
-## user://saves/<slot>.json. Pick a slot with use_slot() or `-- --slot=<name>`.
+## [b]Loading always replaces.[/b] Every saveable gets [code]load_state()[/code]
+## when it becomes ready and whenever a profile is opened — with an empty
+## dictionary when the file has nothing for it — so a new player or Start over
+## can never inherit the last one's stones.
+##
+## [b]Writing needs no asking.[/b] Saved state only changes on a fact or a round,
+## so the file is rewritten (once per frame at most) after every
+## [signal Events.reported] and [signal Events.trial_ended], and on
+## [signal Events.save_requested], pause, focus loss and quit. Turning the headset
+## off mid-task loses nothing. Each write goes to a temporary file first, so a
+## power cut leaves the last good save rather than half of a new one.
+##
+## Files are JSON (types kept via JSON.from_native, never objects). A file from
+## another [constant VERSION] is not loaded: that player starts fresh.
 
-const DIR := "user://saves/"
 const GROUP := &"saveable"
+const VERSION := 1
 
-var slot := "default"
 var _data: Dictionary = {}
+var _queued := false
 
 
 func _ready() -> void:
-	for arg in OS.get_cmdline_user_args():
-		if arg.begins_with("--slot="):
-			slot = arg.trim_prefix("--slot=")
 	_read()
 	get_tree().node_added.connect(_on_node_added)
 	for node in get_tree().root.get_children(): # autoloads that loaded before us
 		_on_node_added(node)
-	Events.save_requested.connect(write)
+	Events.reported.connect(func(_what: StringName, _id: StringName, _data_: Dictionary) -> void: request())
+	Events.trial_ended.connect(func(_visual_skill: StringName, _ok: bool, _round: Dictionary) -> void: request())
+	Events.save_requested.connect(request)
+	Events.profile_closing.connect(write)
+	Events.profile_opened.connect(func(_wiped: bool) -> void: reload())
 
 
 func _notification(what: int) -> void:
@@ -37,54 +49,47 @@ func _notification(what: int) -> void:
 			write()
 
 
+## Writes at the end of this frame, once, however many things asked.
+func request() -> void:
+	if not _queued:
+		_queued = true
+		write.call_deferred()
+
+
 func write() -> void:
+	_queued = false
 	for node in get_tree().get_nodes_in_group(GROUP):
 		_capture(node)
-	DirAccess.make_dir_recursive_absolute(DIR)
-	var file := FileAccess.open(_path(), FileAccess.WRITE)
-	if file:
-		file.store_string(JSON.stringify(JSON.from_native(_data), "\t"))
+	var path := Profile.path(Profile.SAVE_FILE)
+	var file := FileAccess.open(path + ".tmp", FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string(JSON.stringify(JSON.from_native({version = VERSION, nodes = _data}), "\t"))
+	file.close()
+	DirAccess.remove_absolute(path)
+	DirAccess.rename_absolute(path + ".tmp", path)
 
 
-## Switch to another save slot (e.g. one per child), writing the current one out
-## first so nothing is lost.
-func use_slot(new_slot: String) -> void:
-	write()
-	slot = new_slot
-	reload()
-
-
-## Re-read this slot from disk and put every saveable back to what it says,
-## throwing away anything not written yet. That is "discard my changes", and it
-## is the only honest way to prove a save round trip: writing first would just
-## save the thing you were trying to check had survived.
+## Re-reads the file and puts every saveable back to what it says, throwing away
+## anything not written yet. A profile being opened does this; so does a test
+## proving a round trip, where writing first would only save the thing it was
+## trying to check had survived.
 func reload() -> void:
 	_read()
 	for node in get_tree().get_nodes_in_group(GROUP):
-		node.load_state(_data.get(_key(node), {}))
-
-
-## New game: forget this slot and reset every saveable.
-func wipe() -> void:
-	_data.clear()
-	DirAccess.remove_absolute(_path())
-	for node in get_tree().get_nodes_in_group(GROUP):
-		node.load_state({})
-
-
-func _path() -> String:
-	return "%s%s.json" % [DIR, slot]
+		_restore(node)
 
 
 func _read() -> void:
 	_data = {}
-	if not FileAccess.file_exists(_path()):
+	var path := Profile.path(Profile.SAVE_FILE)
+	if not FileAccess.file_exists(path):
 		return
-	var parsed: Variant = JSON.to_native(JSON.parse_string(FileAccess.get_file_as_string(_path())))
-	if parsed is Dictionary:
-		_data = parsed
+	var parsed: Variant = JSON.to_native(JSON.parse_string(FileAccess.get_file_as_string(path)))
+	if parsed is Dictionary and parsed.get("version") == VERSION and parsed.get("nodes") is Dictionary:
+		_data = parsed.nodes
 	else:
-		push_warning("[Save] Unreadable save file: %s" % _path())
+		push_warning("[Save] Not a save this version can read, starting fresh: %s" % path)
 
 
 func _on_node_added(node: Node) -> void:
@@ -104,8 +109,7 @@ func _key(node: Node) -> String:
 
 
 func _restore(node: Node) -> void:
-	if _data.has(_key(node)):
-		node.load_state(_data[_key(node)])
+	node.load_state(_data.get(_key(node), {}))
 
 
 func _capture(node: Node) -> void:

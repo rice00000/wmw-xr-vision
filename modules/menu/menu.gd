@@ -1,21 +1,22 @@
 extends Node
 ## Menu module (autoload "Menu"): the wrist menu, the only interface in the game.
 ##
-## [b]On the wrist, always:[/b] a glowing star on the left wrist, and above it
+## [b]On the wrist:[/b] a glowing star on the left wrist, and above it
 ## the current goal and how many Magic Stones the child has. The goal comes from
 ## [signal Events.goal_changed], so the wrist never polls anything. Touch the star
-## with the other hand and the menu opens; touch it again and it closes.
+## with the other hand to open the menu. The wrist hides while the panel is open;
+## the Home page's Close button closes it.
 ##
 ## [b]The panel[/b] opens in front of the child at chest height and stays where
 ## it opened (world-locked, not glued to the moving wrist, which would be
 ## unreadable). While it is open the game is paused ([method Game.hold_pause]),
 ## [signal Events.menu_toggled] says so, and "opened:menu" is reported. This
-## module and Audio run while paused. Physics does not step while paused, so
-## buttons are pressed by measuring every node in group [code]hand[/code]
-## against every button each frame (see [PokeButton]), never by Area3D overlap.
+## module and Audio run while paused. Each controller has a [UIPointer] using
+## its OpenXR aim pose. Rays intersect button faces directly, so selection works
+## while physics is paused. The trigger clicks once until released.
 ##
 ## [b]Pages[/b], as tabs down the left: Home, Tasks, Shop, Bag, Settings. Every
-## button has a shape and a word, lights up when a fingertip is near, reads its
+## button has a shape and a word, lights up when pointed at, reads its
 ## label aloud after a moment, clicks (the sound table's "pressed" row), and
 ## buzzes the hand that pressed it. Long lists page three rows at a time.
 ##
@@ -38,8 +39,8 @@ const PAGE_NAMES := {
 const STONE := &"magic_stone"
 
 ## Where the panel opens: this far in front of the eyes, this far below them.
-const DISTANCE := 0.45
-const BELOW_EYES := 0.28
+const DISTANCE := 0.75
+const BELOW_EYES := 0.20
 const PANEL_SIZE := Vector2(0.58, 0.42)
 const PANEL_COLOR := Color(0.07, 0.08, 0.16)
 const TEXT_COLOR := Color(1.0, 1.0, 1.0)
@@ -78,7 +79,6 @@ var _camera: Node3D
 var _wrist: Node3D
 var _star: Node3D
 var _star_armed := false
-var _star_rearm_at := 0
 var _star_hover := 0.0
 var _star_hovered := false
 var _goal_label: Label3D
@@ -86,8 +86,9 @@ var _stones_label: Label3D
 var _stones_icon: Node3D
 var _panel: Node3D
 var _content: Node3D
-var _buttons: Array[PokeButton] = []
-var _goal := ""
+var _buttons: Array[RayButton] = []
+var _pointers: Array[UIPointer] = []
+var _ui_open := false
 var _status := ""
 var _first_row := 0
 var _confirm_start_over := false
@@ -97,7 +98,11 @@ var _carried: Dictionary[StringName, Dictionary] = {}
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS # it is the thing you use while the world is paused
+	add_to_group(&"xr_ui")
+	Events.reported.connect(_on_reported)
+	Events.menu_toggled.connect(_on_ui_toggled)
 	Events.goal_changed.connect(_on_goal_changed)
+	Events.profile_closing.connect(close)
 	var inventory := _mod(&"Inventory")
 	if inventory:
 		inventory.changed.connect(_on_items_changed)
@@ -111,11 +116,11 @@ func _process(delta: float) -> void:
 		_attach()
 	if _panel == null:
 		return
-	if _star:
+	if _star and _wrist.is_visible_in_tree() and not is_open:
 		_sense_star(delta)
+	_sense_buttons(delta)
 	if not is_open:
 		return
-	_sense_buttons(delta)
 	if _dirty and is_open:
 		_dirty = false
 		_show()
@@ -130,14 +135,12 @@ func open() -> void:
 		_attach()
 	if _panel == null:
 		return
+	get_tree().call_group(&"xr_ui", &"close")
 	is_open = true
 	page = &"home"
 	_first_row = 0
 	_status = ""
 	_confirm_start_over = false
-	var tasks := _mod(&"Tasks")
-	if tasks and tasks.has_method(&"goal"):
-		_goal = tasks.goal() # once per opening, so the Home page is never stale
 	_place_panel()
 	_panel.visible = true
 	_refresh_readout()
@@ -152,6 +155,8 @@ func close() -> void:
 	if not is_open:
 		return
 	is_open = false
+	for pointer in _pointers:
+		pointer.sample(false)
 	_clear()
 	if _panel:
 		_panel.visible = false
@@ -172,13 +177,6 @@ func recentre() -> void:
 		_place_panel()
 
 
-func toggle() -> void:
-	if is_open:
-		close()
-	else:
-		open()
-
-
 func show_page(page_name: StringName) -> void:
 	if not PAGES.has(page_name):
 		return
@@ -191,7 +189,7 @@ func show_page(page_name: StringName) -> void:
 		Events.read_aloud.emit(_page_speech())
 
 
-## Presses the visible button [param id] as a fingertip would, minus the buzz.
+## Presses the visible button [param id] as a trigger would, minus the buzz.
 ## For the Test Room's RUN ALL. Returns false when no such button is showing.
 func press(id: StringName) -> bool:
 	var button := find_button(id)
@@ -201,7 +199,7 @@ func press(id: StringName) -> bool:
 	return true
 
 
-func find_button(id: StringName) -> PokeButton:
+func find_button(id: StringName) -> RayButton:
 	for button in _buttons:
 		if is_instance_valid(button) and button.id == id and button.is_inside_tree():
 			return button
@@ -209,7 +207,7 @@ func find_button(id: StringName) -> PokeButton:
 
 
 ## Every button showing now, tabs included.
-func buttons() -> Array[PokeButton]:
+func buttons() -> Array[RayButton]:
 	return _buttons.duplicate()
 
 
@@ -281,8 +279,15 @@ func _attach() -> void:
 	_star = null
 	_wrist = null
 	_buttons.clear()
+	_pointers.clear()
 	if not is_instance_valid(_player):
 		return
+	for controller: XRController3D in _player.find_children("*", "XRController3D", true, false):
+		var pointer := UIPointer.new()
+		pointer.name = "%sMenuPointer" % controller.name
+		pointer.controller = controller
+		_player.add_child(pointer)
+		_pointers.append(pointer)
 	_camera = _find_camera(_player)
 	_left = _find_left(_player)
 	if _left:
@@ -333,17 +338,16 @@ func _build_wrist(controller: Node3D) -> void:
 	_stones_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_goal_label = _text(readout, "", Vector3(-0.065, 0.0, 0.0), 0.15, 30, TEXT_COLOR, 0.00035)
 	_goal_label.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	var tasks := _mod(&"Tasks")
-	if tasks and tasks.has_method(&"goal") and _goal.is_empty():
-		_goal = tasks.goal() # once, for a rig that arrives after the first goal went out
 	_refresh_readout()
 
 
 func _refresh_readout() -> void:
+	if _wrist:
+		_wrist.visible = not is_open and not _ui_open
 	if _goal_label == null or not is_instance_valid(_goal_label):
 		return
 	_goal_label.visible = _mod(&"Tasks") != null
-	_goal_label.text = _goal if not _goal.is_empty() else "Touch the star to choose a task"
+	_goal_label.text = _goal() if not _goal().is_empty() else "Touch the star to choose a task"
 	var inventory := _mod(&"Inventory")
 	_stones_label.visible = inventory != null
 	_stones_icon.visible = inventory != null
@@ -401,54 +405,50 @@ func _sense_star(delta: float) -> void:
 		_star_hover = 0.0
 	if near:
 		_star_hover += delta
-		if _star_hover >= PokeButton.DWELL and _star_hover - delta < PokeButton.DWELL:
-			Events.read_aloud.emit("Your magic star. Touch it to %s the menu." % ("close" if is_open else "open"))
-	var now := Time.get_ticks_msec()
+		if _star_hover >= RayButton.DWELL and _star_hover - delta < RayButton.DWELL:
+			Events.read_aloud.emit("Your magic star. Touch it to open the menu.")
 	if not _star_armed:
-		if nearest > STAR_RELEASE and now >= _star_rearm_at:
+		if nearest > STAR_RELEASE:
 			_star_armed = true
 		return
 	if nearest <= STAR_RADIUS:
 		_star_armed = false
-		_star_rearm_at = now + roundi(PokeButton.REARM * 1000.0)
 		_star_hover = INF # touched, not pointed at: no need to read it out
 		if toucher and toucher.has_method(&"pulse"):
 			toucher.pulse()
-		toggle()
+		open()
 
 
-## Each fingertip picks at most one button: the one it is most squarely over,
-## then the nearest. A poke between two buttons presses one of them, never both.
+## One target per ray; one click per frame, even if both triggers fire.
+## Input edges live on the pointers, so rebuilding a page cannot repeat a click.
 func _sense_buttons(delta: float) -> void:
-	var live: Array[PokeButton] = []
-	for button in _buttons:
-		if is_instance_valid(button) and button.is_inside_tree() and button.is_visible_in_tree():
-			live.append(button)
-	var depth: Dictionary[PokeButton, float] = {}
-	var presser: Dictionary[PokeButton, Node] = {}
-	for pair: Array in _hands(null):
-		var best: PokeButton = null
-		var best_at := Vector2(INF, INF)
-		for button in live:
-			var where: Vector2 = button.measure(pair[1])
-			if where.x > PokeButton.MARGIN or where.y < -PokeButton.BEHIND:
-				continue
-			if where.x < best_at.x - 0.0001 or (absf(where.x - best_at.x) <= 0.0001 and where.y < best_at.y):
+	var hovered: Array[RayButton] = []
+	var clicked: RayButton = null
+	var hand: Node = null
+	for pointer in _pointers:
+		var pressed := pointer.sample(is_open)
+		if not pointer.visible:
+			continue
+		var best: RayButton = null
+		var distance := UIPointer.LENGTH
+		for button in _buttons:
+			var hit := button.ray_distance(pointer.global_position, -pointer.global_basis.z)
+			if hit < distance:
+				distance = hit
 				best = button
-				best_at = where
-		if best and best_at.y < depth.get(best, INF):
-			depth[best] = best_at.y
-			presser[best] = pair[0]
-	for button in live:
-		if not is_open:
-			return # a press closed the menu
-		if not button.is_inside_tree():
-			continue # a press rebuilt the page; its replacement carries this one's state
-		if button.sense(depth.get(button, INF), delta):
-			_press(button, presser.get(button))
+		pointer.draw_ray(distance, best != null)
+		if best:
+			hovered.append(best)
+			if pressed and clicked == null:
+				clicked = best
+				hand = pointer.controller.get_node(^"Hand")
+	for button in _buttons:
+		button.sense(hovered.has(button), delta)
+	if clicked:
+		_press(clicked, hand)
 
 
-func _press(button: PokeButton, hand: Node) -> void:
+func _press(button: RayButton, hand: Node) -> void:
 	button.flash()
 	Events.report(&"pressed", button.id, {position = button.global_position})
 	if hand and hand.has_method(&"pulse"):
@@ -460,12 +460,11 @@ func _press(button: PokeButton, hand: Node) -> void:
 # -- pages -----------------------------------------------------------------------
 
 ## A row is {text, icon?, buttons: [button specs]}; a button spec is the
-## arguments of [method PokeButton.create] plus an action.
+## arguments of [method RayButton.create] plus an action.
 ##
 ## Rebuilt whenever anything on it changes. A button with the same id on the new
-## page takes over the old one's state, so a finger still resting where it
-## pressed is not a second press, the label is not read again over the result,
-## and the press is still seen.
+## page takes over the old one's hover and feedback, so the label is not read
+## again over the result and the click is still seen.
 func _show() -> void:
 	_carried.clear()
 	for button in _buttons:
@@ -478,7 +477,7 @@ func _show() -> void:
 		var tab_page := PAGES[i]
 		var tab := _add_button({
 			id = StringName("menu_tab_%s" % tab_page), label = PAGE_NAMES[tab_page], icon = tab_page,
-			size = TAB_SIZE, style = PokeButton.Style.CHOSEN if tab_page == page else PokeButton.Style.TAB,
+			size = TAB_SIZE, style = RayButton.Style.CHOSEN if tab_page == page else RayButton.Style.TAB,
 			say = "%s page" % PAGE_NAMES[tab_page], action = show_page.bind(tab_page),
 		})
 		tab.position = Vector3(-0.225, 0.15 - i * 0.075, 0.0)
@@ -514,7 +513,7 @@ func _home_rows() -> Array:
 	var rows := []
 	var tasks := _mod(&"Tasks")
 	if tasks:
-		var goal := _goal if not _goal.is_empty() else "Nothing to do right now. Pick one on the Tasks page!"
+		var goal := _goal() if not _goal().is_empty() else "Nothing to do right now. Pick one on the Tasks page!"
 		rows.append({text = "Now: %s" % goal})
 	else:
 		rows.append({text = "Tasks are switched off."})
@@ -541,13 +540,12 @@ func _task_rows() -> Array:
 	if not current.is_empty():
 		var info := _describe(tasks, current)
 		var rows := [{text = "%s\n%s" % [info.title, _trains(info)]}]
-		var progress: String = _goal if not _goal.is_empty() else (tasks.goal() if tasks.has_method(&"goal") else "")
-		if not progress.is_empty():
-			rows.append({text = "Now: %s" % progress})
+		if not _goal().is_empty():
+			rows.append({text = "Now: %s" % _goal()})
 		var give_up := []
 		if tasks.has_method(&"abandon") and info.get("can_abandon", true):
 			give_up.append({id = &"menu_give_up", label = "Give up", icon = &"give_up",
-				style = PokeButton.Style.CAUTION, say = "Give up %s" % info.title,
+				style = RayButton.Style.CAUTION, say = "Give up %s" % info.title,
 				action = _give_up.bind(current)})
 		rows.append({text = "Reward: %s" % _rewards(info), icon = &"stone", buttons = give_up})
 		return rows
@@ -625,10 +623,10 @@ func _settings_rows() -> Array:
 	var teleport: bool = Settings.value(&"move_mode") == &"teleport"
 	rows.append({text = "Move by\n%s" % ("Teleport only" if teleport else "Walking"), buttons = [
 		{id = &"menu_set_move_walk", label = "Walk", icon = &"walk",
-			style = PokeButton.Style.ACTION if teleport else PokeButton.Style.CHOSEN,
+			style = RayButton.Style.ACTION if teleport else RayButton.Style.CHOSEN,
 			say = "Move by walking with the stick", action = _choose.bind(&"move_mode", &"walk", "Walking")},
 		{id = &"menu_set_move_teleport", label = "Teleport", icon = &"teleport",
-			style = PokeButton.Style.CHOSEN if teleport else PokeButton.Style.ACTION,
+			style = RayButton.Style.CHOSEN if teleport else RayButton.Style.ACTION,
 			say = "Move by teleport only", action = _choose.bind(&"move_mode", &"teleport", "Teleport only")},
 	]})
 	rows.append({text = "Turn\n%d degrees" % roundi(Settings.value(&"turn_degrees")), buttons = [
@@ -641,7 +639,7 @@ func _settings_rows() -> Array:
 		rows.append({text = "Start over needs Saving, which is switched off."})
 	elif _confirm_start_over:
 		rows.append({text = "Really start again?", buttons = [
-			{id = &"menu_start_over_yes", label = "Yes", icon = &"yes", style = PokeButton.Style.CAUTION,
+			{id = &"menu_start_over_yes", label = "Yes", icon = &"yes", style = RayButton.Style.CAUTION,
 				say = "Yes, start over from the very beginning", action = _start_over},
 			{id = &"menu_start_over_no", label = "No", icon = &"no", say = "No, keep playing",
 				action = _cancel_start_over},
@@ -649,7 +647,7 @@ func _settings_rows() -> Array:
 	else:
 		rows.append({text = "Start over", buttons = [
 			{id = &"menu_start_over", label = "Start over", icon = &"start_over",
-				style = PokeButton.Style.CAUTION, say = "Start over from the very beginning",
+				style = RayButton.Style.CAUTION, say = "Start over from the very beginning",
 				action = _ask_start_over},
 		]})
 	return rows
@@ -691,9 +689,9 @@ func _page_speech() -> String:
 	var inventory := _mod(&"Inventory")
 	match page:
 		&"home":
-			var line := "Menu."
-			if not _goal.is_empty():
-				line += " Now: %s." % _goal
+			var line := "Menu. Point at a button and press the trigger to choose."
+			if not _goal().is_empty():
+				line += " Now: %s." % _goal()
 			if inventory:
 				line += " You have %s." % _amount(STONE, inventory.count(STONE))
 			return line
@@ -790,17 +788,11 @@ func _cancel_start_over() -> void:
 	_dirty = true
 
 
-## Wipes this save slot and goes back to the first level. Settings are not part
-## of a save, so the child's comfort and sound choices stay.
+## This player's game from the very beginning: progress and settings back to
+## new, the research log kept (Profile).
 func _start_over() -> void:
-	var save := _mod(&"Save")
 	close()
-	if save == null:
-		return
-	save.wipe()
-	var first := _first_level()
-	if not first.is_empty():
-		Game.change_level(first)
+	Profile.start_over()
 
 
 func _say_status(text: String) -> void:
@@ -841,19 +833,19 @@ func _lay_paging(total: int, left: float, right: float) -> void:
 	var y := -0.17
 	if at > 1:
 		var back := _add_button({id = &"menu_prev", label = "Back", icon = &"prev",
-			size = Vector2(0.13, 0.06), style = PokeButton.Style.NAV, say = "Back", action = _next.bind(-1)})
+			size = Vector2(0.13, 0.06), style = RayButton.Style.NAV, say = "Back", action = _next.bind(-1)})
 		back.position = Vector3(left + 0.065, y, 0.0)
 	if at < pages:
 		var more := _add_button({id = &"menu_next", label = "More", icon = &"next",
-			size = Vector2(0.13, 0.06), style = PokeButton.Style.NAV, say = "More", action = _next.bind(1)})
+			size = Vector2(0.13, 0.06), style = RayButton.Style.NAV, say = "More", action = _next.bind(1)})
 		more.position = Vector3(right - 0.065, y, 0.0)
 	_text(_content, "%d / %d" % [at, pages], Vector3((left + right) * 0.5 - 0.04, y, 0.001), 0.08, 30,
 		TEXT_COLOR, 0.0004, HORIZONTAL_ALIGNMENT_CENTER)
 
 
-func _add_button(spec: Dictionary) -> PokeButton:
-	var button := PokeButton.create(spec.id, spec.label, spec.get("icon", &""),
-		spec.get("size", BUTTON_SIZE), spec.get("style", PokeButton.Style.ACTION), spec.get("say", ""))
+func _add_button(spec: Dictionary) -> RayButton:
+	var button := RayButton.create(spec.id, spec.label, spec.get("icon", &""),
+		spec.get("size", BUTTON_SIZE), spec.get("style", RayButton.Style.ACTION), spec.get("say", ""))
 	button.action = spec.get("action", Callable())
 	_content.add_child(button)
 	_buttons.append(button)
@@ -914,8 +906,8 @@ func _describe(tasks: Node, task_id: StringName) -> Dictionary:
 
 
 func _trains(info: Dictionary) -> String:
-	var skills: PackedStringArray = PackedStringArray(info.get("skills", []))
-	return "Trains: %s" % ", ".join(skills) if not skills.is_empty() else "Just for fun"
+	var visual_skills: PackedStringArray = PackedStringArray(info.get("visual_skills", []))
+	return "Trains: %s" % ", ".join(visual_skills) if not visual_skills.is_empty() else "Just for fun"
 
 
 func _rewards(info: Dictionary) -> String:
@@ -957,13 +949,6 @@ func _shop_items() -> Array[ItemDef]:
 	return items
 
 
-func _first_level() -> String:
-	var main := Game.level_root.get_parent() if is_instance_valid(Game.level_root) else null
-	if main and &"first_level" in main:
-		return main.first_level
-	return Game.level.scene_file_path if is_instance_valid(Game.level) else ""
-
-
 func _find_camera(player: Node) -> Node3D:
 	var camera := player.get_node_or_null(^"Camera") as Node3D
 	if camera:
@@ -982,8 +967,12 @@ func _find_left(player: Node) -> Node3D:
 	return null
 
 
-func _on_goal_changed(text: String, _place: StringName) -> void:
-	_goal = text
+## The goal's line for the wrist and the pages: always the published one.
+func _goal() -> String:
+	return Events.goal.text
+
+
+func _on_goal_changed(_goal_now: Goal) -> void:
 	_refresh_readout()
 	if is_open:
 		_dirty = true
@@ -993,3 +982,16 @@ func _on_items_changed(_item_id: StringName, _count: int) -> void:
 	_refresh_readout()
 	if is_open:
 		_dirty = true
+
+
+func _on_reported(what: StringName, id: StringName, _data: Dictionary) -> void:
+	if what == &"asked" and id == &"menu":
+		if is_open:
+			close()
+		else:
+			open()
+
+
+func _on_ui_toggled(open_now: bool) -> void:
+	_ui_open = open_now
+	_refresh_readout()

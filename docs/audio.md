@@ -69,7 +69,7 @@ rows are tones.
 
 ## Two things the table does not name
 
-`Events.say(text, clip)` carries the guide's recorded line next to the subtitle
+`Narrator.say(text, clip)` carries the guide's recorded line next to the subtitle
 text, and `Events.play_at(clip, position)` plays a clip a task is already
 holding — `SearchTrial.prompt_voice` has one per object, because "kettle" is a
 recording, not a row. Both still work and are still the only two audio calls
@@ -81,13 +81,13 @@ Many of the children this is for read poorly, so nothing should exist only as
 text. While the **Read aloud** setting is on, the module speaks with the
 platform's text-to-speech (an English voice):
 
-- every `Events.say(text)` line that carries **no** clip, queued in order;
-- every `Events.read_aloud(text)` — a wrist-menu button a fingertip is held
-  near, a page coming up, "You need 1 more Magic Stone". A new one cuts off the
-  one before, so pointing along a row reads the button under the finger, not a
+- the Narrator's current line when it carries **no** clip (one at a time, in order; see [state-and-narration.md](state-and-narration.md));
+- every `Events.read_aloud(text)` — a wrist-menu button a controller ray hovers
+  over, a page coming up, "You need 1 more Magic Stone". A new one cuts off the
+  one before, so pointing along a row reads the button under the pointer, not a
   backlog.
 
-Recording a line later is just passing the clip to `Events.say`; the speech for
+Recording a line later is just passing the clip to `Narrator.say`; the speech for
 it stops by itself. `Audio.speech` lists every request (`say: …` / `read: …`),
 so the suite can see a line arrive on a machine with no speech engine.
 
@@ -99,7 +99,7 @@ wrist menu pauses it and still has to be heard.
 
 **The table cannot lie.** A clip path that is not there, an option that is
 misspelt, a key that appears twice: all are collected when the file loads,
-printed, and fail `tools\test.cmd`. A row never silently does nothing.
+printed, and fail `python tools/test.py`. A row never silently does nothing.
 
 **The table cannot fall behind.** Every key the game sends that no row answers
 is printed once as `AUDIO_UNMAPPED`, shown live on the Test Room's *Audio:

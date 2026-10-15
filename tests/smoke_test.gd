@@ -1,20 +1,20 @@
 extends Node
 ## Headless smoke test. Run:
-##   godot --headless --xr-mode off --path . res://tests/smoke_test.tscn -- --slot=smoke_test
-## Uses its own save slot, so it never touches real progress. Exit code 0 = all passed.
+##   godot --headless --xr-mode off --path . res://tests/smoke_test.tscn -- --profile=smoke_test
+## Uses its own profile, so it never touches a real player. Exit code 0 = all passed.
 ##
 ## Flat on purpose: one file, one pass, a few seconds. Sections in order: the
 ## game as it boots, on the real island (the first-time chain driven through,
 ## free play, a save with furniture in the house), hands and placement there,
 ## then a new game on a small island fixture that checks the chain in detail
 ## (measured rounds, the guide round a wall), the menu's picks and a save round
-## trip, every module's own check from the Test Room, the menu, the sound table,
-## and the island's map.
+## trip, Start over and switching players, every module's own check from the
+## Test Room (on its own profile), the menu, the sound table, and the island's map.
 
 ## Sections that ran all the way to their last line. A GDScript error aborts the
 ## function it happens in without raising, so without this a crashed section
 ## would simply print fewer lines and still say PASSED.
-const SECTIONS := 8
+const SECTIONS := 10
 ## Where the test fingertip waits between pokes: out of reach of everything.
 const MENU_AWAY := Vector3(0.0, -50.0, 0.0)
 
@@ -23,12 +23,16 @@ var _finished := 0
 
 
 func _ready() -> void:
-	Save.use_slot("smoke_test")
-	Save.wipe()
+	if Profile.id != PROFILE:
+		push_error("Run the smoke test with -- --profile=%s: it wipes the profile it runs on." % PROFILE)
+		get_tree().quit(2)
+		return
+	_wipe(PROFILE)
+	Events.profile_opened.emit(true)
 	# Lines still queue and wait for each other in order, just without sitting
 	# through them: set before the game boots, so the first lines are timed too.
-	Tasks.line_pace = 2
-	Station.line_pace = 2
+	Narrator.read_pace = 0.0
+	Narrator.min_seconds = 0.15
 	add_child(load("res://main.tscn").instantiate())
 	_listen()
 	await _settle()
@@ -37,12 +41,15 @@ func _ready() -> void:
 	_new_game()
 	await _open_world()
 	await _replay()
+	await _profiles()
 	await _module_checks()
 	await _menu()
+	await _controls_and_debug()
 	await _audio()
 	await _island()
 	_check(_finished == SECTIONS, "every section ran to its end (%d of %d)" % [_finished, SECTIONS])
-	Save.wipe()
+	_wipe(PROFILE)
+	_wipe(OTHER)
 	print("SMOKE TEST: %s" % ("PASSED" if _failures == 0 else "%d FAILED" % _failures))
 	get_tree().quit(_failures)
 
@@ -53,6 +60,9 @@ func _ready() -> void:
 ## guide, a wall between the dock and the picnic table, and a pond.
 const FIXTURE := "res://tests/fixtures/open_world.tscn"
 const STONE := &"magic_stone"
+const PROFILE := &"smoke_test"
+## A second child on the same headset.
+const OTHER := &"smoke_test_other"
 
 var _goals: Array = [] # [text, place] for every goal_changed
 var _judged: Array[StringName] = []
@@ -70,23 +80,23 @@ func _open_world() -> void:
 	var guide := Game.level.get_node(^"GuideCharacter") as GuideCharacter
 	var picnic := Game.level.get_node(^"PicnicStation") as Station
 	var meadow := Game.level.get_node(^"MeadowStation") as Station
-	picnic.runner.gap = 0.05 # no need to wait out the real pause between rounds
-	meadow.runner.gap = 0.05
+	picnic.gap = 0.05 # no need to wait out the real pause between rounds
+	meadow.gap = 0.05
 	guide.walk_speed = 8.0
 
 	# -- welcome: one task at a time, and the menu's view of it ---------------
 	_check(Tasks.current() == &"welcome", "the welcome starts by itself on a new game")
-	_check(Tasks.goal_place() == &"dock" and _last_place() == &"dock",
+	_check(Events.goal.place == &"dock" and _last_place() == &"dock",
 		"goal_changed says what to do and that it happens at the dock")
 	_check(Tasks.offers().is_empty(), "nothing is offered while a task is running")
 	_check(not Tasks.accept(&"find_it") and not Tasks.start(&"find_it") and Tasks.current() == &"welcome",
 		"only one task at a time")
 	_check(not Tasks.abandon() and Tasks.current() == &"welcome", "the welcome cannot be abandoned")
 	var about := Tasks.describe(&"find_it")
-	_check(about.get("title") == "Find It" and about.get("skills") == PackedStringArray(["Finding things in a mess"])
+	_check(about.get("title") == "Find It" and about.get("visual_skills") == PackedStringArray(["Finding things in a mess"])
 		and about.get("rewards") == {STONE: 2} and about.get("place") == &"picnic"
 		and about.get("repeatable") == true and about.get("times_done") == 0 and about.get("can_abandon") == true,
-		"describe gives title, skill names, rewards, place, repeatable, times done, can abandon")
+		"describe gives title, visual skill names, rewards, place, repeatable, times done, can abandon")
 	_check(Tasks.describe(&"welcome").get("can_abandon") == false, "describe says the welcome cannot be given up")
 	_check(Tasks.describe(&"no_such_task").is_empty(), "describe of an unknown task is empty")
 	for task in TaskDef.all():
@@ -100,11 +110,11 @@ func _open_world() -> void:
 	var hand := Node3D.new()
 	add_child(hand)
 	guide.ball().grab(hand)
-	_check(Tasks.waiting_for() == "opened:menu" and Tasks.goal_place() == &"",
+	_check(Events.goal.waiting_for == "opened:menu" and Events.goal.place == &"",
 		"taking the ball moves the welcome on to the wrist menu")
 	hand.free()
 	Events.report(&"opened", &"menu") # what the wrist menu reports when its star is touched
-	_check(Tasks.goal_place() == &"picnic" and _last_place() == &"picnic", "then on to the picnic table")
+	_check(Events.goal.place == &"picnic" and _last_place() == &"picnic", "then on to the picnic table")
 
 	# -- the guide leads, round the wall, and waits for a child left behind --
 	var crossed := false
@@ -151,15 +161,15 @@ func _open_world() -> void:
 	await _physics(3)
 	_check(Tasks.is_done(&"welcome") and Inventory.count(STONE) == 1, "sitting down at the picnic ends the welcome: 1 stone")
 	_check(Tasks.current() == &"find_it", "find_it follows the welcome the first time")
-	_check(_said[_said.size() - 1] == TaskDef.find(&"welcome").completed_text,
-		"the reward line is not cut off by the next task's first instruction")
+	_check(Narrator.current != null and Narrator.current.text == TaskDef.find(&"welcome").completed_text,
+		"the reward line is being said; the next task's first instruction waits its turn")
 	_check(picnic.is_wanted() and _last_place() == &"picnic", "find_it wants the picnic station")
 	_check(not _walking(), "stick walking is off while sitting at a station")
 	var trial := picnic.trial() as SearchTrial
 	await _next_round(trial)
 	_check(trial.is_running(), "rounds start with the child already sitting there")
 	_check(picnic.sign_label.text.contains("Find It") and picnic.sign_label.text.contains("Trains: Finding things in a mess")
-		and picnic.sign_label.text.contains("5 more to go"), "the sign shows the task, the skill and the rounds")
+		and picnic.sign_label.text.contains("5 more to go"), "the sign shows the task, the visual skill and the rounds")
 
 	# Round 1, a baseline probe: everything a researcher needs is in the line.
 	_check(trial.condition.probe, "the run opens with an unscored baseline probe")
@@ -178,7 +188,23 @@ func _open_world() -> void:
 	_check(graded != null and absf(graded.applied_luminance() - graded.intended_luminance()) < 0.01,
 		"the object is graded to the Weber contrast the round logged")
 	var before := Training.level(&"search")
-	var probe := await _pick(trial, trial.target())
+	# Keep the feedback on screen while the gripping hand moves away.
+	picnic.gap = 1.0
+	var picked := trial.target() as Grabbable
+	var rest := picked.global_position
+	var picking_hand := Game.player.get_node(^"RightController/Hand") as Hand
+	var controller := picking_hand.get_parent() as Node3D
+	var hand_rest := controller.position
+	var probe := await _pick(trial, picked)
+	controller.position += Vector3(0.0, 0.15, 0.0)
+	await get_tree().create_timer(0.75).timeout
+	_check(picked.holder == null and picking_hand.held == null
+		and picked.global_position.is_equal_approx(rest + Vector3.UP * trial.lift_height),
+		"the correct pick lifts independently after the gripping hand moves")
+	picking_hand.release()
+	_check(picked.freeze, "letting go of grip later leaves the lifted feedback in place")
+	controller.position = hand_rest
+	picnic.gap = 0.05
 	_check(probe.get("probe", false) and probe.get("trial") == &"search", "the probe round is logged as a probe")
 	_check(probe.get("tries", -1) == 0 and probe.get("target") == probe.get("picked"), "a first-pick success logs no wrong tries")
 	_check(probe.has("axis_overlap") and probe.has("axis_contrast") and probe.has("seconds") and probe.has("hint"),
@@ -216,9 +242,10 @@ func _open_world() -> void:
 	_check(hinted.get("hint", 0) == 1, "the hint level reached is logged with the round")
 	_check(hinted.get("seconds", 99.0) < clock + 0.05, "the time away is not in the logged seconds")
 	await get_tree().create_timer(0.4).timeout
-	_check(not trial.is_running() and Tasks.rounds() == Vector2i(3, 5),
+	_check(not trial.is_running() and Events.goal.done == 3 and Events.goal.needed == 5,
 		"standing up stops after the round in progress (3 of 5)")
-	_check(Tasks.goal().contains("3/5"), "the goal line counts the rounds")
+	_check(Events.goal.text.contains("3/5") and picnic.sign_label.text.contains("2 more to go"),
+		"the goal line and the station's sign count the same rounds")
 
 	# Back to the bench: rounds 4 and 5, the first two that move the staircase.
 	_place_head(picnic.place.global_position)
@@ -271,15 +298,15 @@ func _open_world() -> void:
 	_check(Tasks.times_done(&"butterflies") == 1 and Inventory.count(STONE) == 5, "five butterflies: 2 more stones")
 
 	# -- First furniture: buy, take out, put it in the house ------------------
-	_check(Tasks.current() == &"first_furniture" and Tasks.goal_place() == &"", "first_furniture follows")
+	_check(Tasks.current() == &"first_furniture" and Events.goal.place == &"", "first_furniture follows")
 	Events.report(&"bought", &"chair") # the shop
 	Events.report(&"taken_out", &"chair") # the bag
-	_check(Tasks.goal_place() == &"home" and _last_place() == &"home", "the last step happens at home")
+	_check(Events.goal.place == &"home" and _last_place() == &"home", "the last step happens at home")
 	await _physics(4)
 	_check(guide.leading_to() == &"home", "the guide sets off for the house")
 	Events.report(&"placed", &"chair")
 	_check(Tasks.current() == &"" and Inventory.count(STONE) == 6, "furniture placed: the chain is done, 6 stones in all")
-	_check(Tasks.goal() == "" and _goals[_goals.size() - 1] == ["", &""], "goal_changed goes empty when there is nothing to do")
+	_check(Events.goal.task == &"" and _goals[_goals.size() - 1] == ["", &""], "goal_changed goes empty when there is nothing to do")
 	var last_line := TaskDef.find(&"first_furniture").completed_text
 	await _until(func() -> bool: return _said.has(last_line), 120)
 	_check(_said.has(last_line), "the last line tells the child about the wrist menu")
@@ -289,30 +316,34 @@ func _open_world() -> void:
 	var incomplete := 0
 	for line in _rounds:
 		var complete: bool = line.has("trial") and line.has("difficulty") and line.has("seconds") \
-			and line.has("tries") and line.has("hint") and line.has("success")
+			and line.has("tries") and line.has("hint") and line.has("success") and line.has("visual_skill")
 		complete = complete and line.keys().any(func(key: Variant) -> bool: return str(key).begins_with("axis_"))
 		if not complete:
 			incomplete += 1
 			print("    incomplete round line: %s" % line)
 	_check(_rounds.size() == 10 and incomplete == 0,
-		"every round was one line with condition, result, time, tries and hint (%d lines)" % _rounds.size())
+		"every round logs its visual skill, condition, result, time, tries and hint (%d lines)" % _rounds.size())
 	_finished += 1
 
 
 ## Everything said, judged, logged and asked for, from boot on.
 func _listen() -> void:
-	Events.goal_changed.connect(func(text: String, place: StringName) -> void: _goals.append([text, place]))
+	Events.goal_changed.connect(func(goal: Goal) -> void: _goals.append([goal.text, goal.place]))
 	Events.feedback.connect(func(kind: StringName, _at: Vector3) -> void: _judged.append(kind))
 	Events.trial_ended.connect(_on_round_logged)
-	Events.instruction.connect(func(text: String, _voice: AudioStream) -> void: _said.append(text))
+	Narrator.line_started.connect(func(line: VoiceLine) -> void: _said.append(line.text))
 
 
 ## Forget the island playthrough, so the fixture starts from a new game.
 func _new_game() -> void:
-	# A save from before the island (tasks kept as dictionaries) loads as nothing to do.
-	Tasks.load_state({"active": {&"tutorial": Vector2i.ZERO}, "rounds": {}, "step": "two", "times_done": []})
-	_check(Tasks.current() == &"" and Tasks.times_done(&"welcome") == 0, "an old-format save loads as a fresh start")
-	Save.wipe()
+	# A save this version cannot read (one from before profiles) is not half-loaded:
+	# every saveable starts fresh.
+	var old := FileAccess.open(Profile.path(Profile.SAVE_FILE), FileAccess.WRITE)
+	old.store_string(JSON.stringify({Tasks = {current = "find_it", step = "two"}, Inventory = {items = {magic_stone = 9}}}))
+	old.close()
+	Save.reload()
+	_check(Tasks.current() == &"" and Tasks.times_done(&"welcome") == 0 and Inventory.count(STONE) == 0,
+		"a save from another version loads as a fresh start, not half of one")
 	_goals.clear()
 	_judged.clear()
 	_rounds.clear()
@@ -331,12 +362,12 @@ func _island_playthrough() -> void:
 	await _physics(4)
 	var dock := Place.find(get_tree(), &"dock")
 	_check(dock != null and _flat(_head() - dock.global_position).length() < 1.0, "the child starts at the dock")
-	_check(Tasks.current() == &"welcome" and Tasks.goal_place() == &"dock", "the welcome starts, at the dock")
+	_check(Tasks.current() == &"welcome" and Events.goal.place == &"dock", "the welcome starts, at the dock")
 	var guide := island.get_node(^"GuideCharacter") as GuideCharacter
 	var picnic := island.get_node(^"PicnicStation") as Station
 	var meadow := island.get_node(^"MeadowStation") as Station
-	picnic.runner.gap = 0.05
-	meadow.runner.gap = 0.05
+	picnic.gap = 0.05
+	meadow.gap = 0.05
 	guide.walk_speed = 8.0
 	await _until(func() -> bool: return guide.is_offering() and guide.mode == GuideCharacter.Mode.THERE, 300)
 	_check(guide.is_offering() and _flat(guide.ball().global_position - _head()).length() < 1.4,
@@ -380,7 +411,7 @@ func _island_playthrough() -> void:
 	guide.ball().grab(hand)
 	hand.free()
 	Events.report(&"opened", &"menu")
-	_check(Tasks.goal_place() == &"picnic", "the ball, the wrist menu, then off to the picnic table")
+	_check(Events.goal.place == &"picnic", "the ball, the wrist menu, then off to the picnic table")
 	_place_head(picnic.place.global_position)
 	await _physics(3)
 	_check(Tasks.current() == &"find_it" and Inventory.count(STONE) == 1, "sitting down at the picnic: 1 stone, Find It")
@@ -484,7 +515,6 @@ func _replay() -> void:
 	var catcher := meadow.trial() as CatchTrial
 	await _next_round(catcher)
 	var butterfly := catcher.current()
-	var counted := meadow.runner.round_count()
 	var lines := _rounds.size()
 	var finished: Array[StringName] = []
 	var on_finished := func(what: StringName, id: StringName, _data: Dictionary) -> void:
@@ -496,7 +526,7 @@ func _replay() -> void:
 	await get_tree().create_timer(0.3).timeout
 	Events.reported.disconnect(on_finished)
 	_check(not catcher.is_running() and not is_instance_valid(butterfly) and _rounds.size() == lines
-		and meadow.runner.round_count() == counted and finished.is_empty(),
+		and finished.is_empty(),
 		"the round in progress is dropped: not logged, not counted, nothing reported finished")
 	_place_head(Vector3(0.0, 0.0, 8.0))
 	await _physics(3)
@@ -513,7 +543,7 @@ func _replay() -> void:
 	Training.unpin_all()
 	await _pick(trial, trial.target())
 	await _physics(2)
-	_check(Tasks.rounds() == Vector2i(1, 5), "one round of the repeat done")
+	_check(Events.goal.done == 1 and Events.goal.needed == 5, "one round of the repeat done")
 
 	Save.write()
 	Tasks.load_state({}) # forget it all in memory...
@@ -522,32 +552,24 @@ func _replay() -> void:
 	_check(Tasks.current() == &"" and not picnic.is_wanted(), "(progress forgotten in memory)")
 	Save.reload() # ...and get it back off disk
 	await _physics(2)
-	_check(Tasks.current() == &"find_it" and Tasks.rounds() == Vector2i(1, 5),
+	_check(Tasks.current() == &"find_it" and Events.goal.done == 1 and Events.goal.needed == 5,
 		"the active task and its rounds survive a save/load round trip")
 	_check(Tasks.times_done(&"find_it") == 1 and Tasks.times_done(&"welcome") == 1, "times done survive it too")
 	_check(_last_place() == &"picnic" and picnic.is_wanted(), "after loading, the goal and the station's request come back")
 	_check(Inventory.count(STONE) == 6, "stones survive it")
 
 	_place_head(picnic.place.global_position)
+	await _next_round(trial)
+	_check(trial.condition.round_index == 1 and trial.condition.probe,
+		"after loading, the run carries on at round 2, still one of the three baseline probes")
+	await _pick(trial, trial.target())
 	for _i in 3:
 		await _next_round(trial)
 		await _pick(trial, trial.target())
-	# The last round, then a save in the pause before the station reports it done.
-	picnic.runner.gap = 1.0
-	await _next_round(trial)
-	await _pick(trial, trial.target())
-	_check(Tasks.current() == &"find_it" and Tasks.rounds() == Vector2i(5, 5), "(all five rounds in, not yet reported)")
-	Save.write()
-	Tasks.load_state({})
-	Save.reload()
-	await _physics(2)
-	_check(Tasks.current() == &"" and Tasks.times_done(&"find_it") == 2,
-		"a save made after the last round loads as a finished step, not a sixth round")
+	_check(Tasks.current() == &"" and Tasks.times_done(&"find_it") == 2 and not picnic.is_wanted(),
+		"the fifth round ends the step there and then: one count, nothing to report late")
 	_check(Inventory.count(STONE) == 8, "the repeat pays again")
 	_check(Tasks.offers().has(&"find_it"), "next does not chain a second time, and the task stays on offer")
-	await get_tree().create_timer(1.2).timeout
-	_check(Tasks.current() == &"" and not picnic.is_wanted(), "the late 'finished' changes nothing")
-	picnic.runner.gap = 0.05
 
 	# A step that sends the child to where they already are.
 	var real := Tasks.save_state()
@@ -562,10 +584,10 @@ func _replay() -> void:
 		"a step waiting for entered:<station> ends if the child is already sitting there")
 	Tasks.load_state(real)
 
-	var skill := SkillDef.find(&"search")
-	var line := "%s! %s" % [skill.display_name, skill.description]
+	var visual_skill := VisualSkillDef.find(&"search")
+	var line := "%s! %s" % [visual_skill.display_name, visual_skill.description]
 	await _until(func() -> bool: return _said.has(line), 600)
-	_check(_said.count(line) == 3, "the station says what it trains once each time it is woken (%d)" % _said.count(line))
+	_check(_said.count(line) == 2, "the station says what it trains once each time the task is run (%d)" % _said.count(line))
 	var welcome_done := _said.find(TaskDef.find(&"welcome").completed_text)
 	_check(welcome_done >= 0 and _said.find(TaskDef.find(&"find_it").steps[0].instruction) == welcome_done + 1
 		and _said.find(line) == welcome_done + 2 and _said[welcome_done + 3].begins_with("Find the"),
@@ -574,6 +596,78 @@ func _replay() -> void:
 	_place_head(Vector3(0.0, 0.0, 8.0))
 	_layers()
 	_finished += 1
+
+
+## Several children on one headset, and Start over. Each player's progress,
+## settings and research log are their own; opening a profile replaces
+## everything, so nothing of the last player or the last game is left behind.
+func _profiles() -> void:
+	_check(Tasks.times_done(&"find_it") == 2 and Inventory.count(STONE) > 0, "(a player with progress)")
+	Settings.set_value(&"volume_master", 0.5)
+	Training.pin(&"clutter", 3.0)
+	var level_before := Training.level(&"search")
+	_check(level_before != Training.START_LEVEL, "(and a staircase that has moved)")
+	Narrator.say("A line from the old game.")
+	Narrator.say("Another line from the old game.")
+	var logs_before := _logs(PROFILE)
+
+	# Start over: everything back to new, the research log kept.
+	Profile.start_over()
+	await _settle()
+	await _settle()
+	_check(Game.level.level_id == &"island" and Tasks.current() == &"welcome" and Tasks.times_done(&"find_it") == 0,
+		"Start over begins this player's game again on the island")
+	_check(Inventory.count(STONE) == 0, "with no stones")
+	_check(Training.level(&"search") == Training.START_LEVEL and not Training.is_pinned(&"clutter"),
+		"the staircase is back at its start and no debug pin is left")
+	_check(is_equal_approx(Settings.value(&"volume_master"), 1.0), "the settings are back to their defaults")
+	_check(not _said.slice(_said.find("A line from the old game.") + 1).has("Another line from the old game."),
+		"a line still waiting from the old game is never said in the new one")
+	_check(Events.goal.task == &"welcome" and Events.goal.place == &"dock", "the goal is the welcome's, at the dock")
+	Narrator.say("New line.")
+	_check(_logs(PROFILE).size() >= logs_before.size() and Array(logs_before).all(func(f: String) -> bool: return _logs(PROFILE).has(f)),
+		"the research log is kept: Start over never deletes one")
+	var newest := FileAccess.get_file_as_string(Profile.path("metrics/") + _logs(PROFILE)[-1])
+	_check(newest.contains("\"type\":\"session\"") and newest.contains("\"wiped\":true"),
+		"and the new session's log says this player started over")
+
+	# A second child: their own game; switching back gives the first one back.
+	Inventory.add(STONE, 3)
+	Settings.set_value(&"turn_degrees", 45.0)
+	Profile.switch(OTHER)
+	await _settle()
+	await _settle()
+	_check(Profile.id == OTHER and Inventory.count(STONE) == 0 and Tasks.current() == &"welcome",
+		"another player starts a game of their own")
+	_check(Settings.value(&"turn_degrees") == 30.0, "with their own settings")
+	Inventory.add(STONE, 5)
+	Profile.switch(PROFILE)
+	await _settle()
+	await _settle()
+	_check(Inventory.count(STONE) == 3 and Settings.value(&"turn_degrees") == 45.0,
+		"switching back gives the first player their stones and settings")
+	Profile.switch(OTHER)
+	await _settle()
+	await _settle()
+	_check(Inventory.count(STONE) == 5, "and the second player theirs")
+	Profile.switch(PROFILE)
+	await _settle()
+	await _settle()
+	Settings.reset()
+	_finished += 1
+
+
+## This profile's research logs, oldest first.
+func _logs(profile: StringName) -> PackedStringArray:
+	var files := DirAccess.get_files_at("user://profiles/%s/metrics/" % profile)
+	files.sort()
+	return files
+
+
+## Deletes [param profile]'s progress and settings; its logs stay.
+func _wipe(profile: StringName) -> void:
+	for file in [Profile.SAVE_FILE, Profile.SETTINGS_FILE]:
+		DirAccess.remove_absolute("user://profiles/%s/%s" % [profile, file])
 
 
 ## tasks → trials ← stations, checked rather than hoped for: no code in a layer
@@ -600,7 +694,7 @@ func _layers() -> void:
 			% [root, "" if found.is_empty() else ": " + ", ".join(found)])
 
 
-func _on_round_logged(_skill: StringName, success: bool, data: Dictionary) -> void:
+func _on_round_logged(_visual_skill: StringName, success: bool, data: Dictionary) -> void:
 	var line := data.duplicate()
 	line.success = success
 	_rounds.append(line)
@@ -1024,10 +1118,18 @@ func _audio() -> void:
 	_check(Array(Audio.played.slice(-5)).any(func(key: String) -> bool: return key.begins_with("caught.butterfly")),
 		"the key the sound was found under is the fact that happened")
 
-	# The two older seams still work, because tasks hold clips of their own.
+	# The two seams still work, because tasks hold clips of their own.
+	await Narrator.wait_quiet()
 	before = Audio.spoken
-	Events.say("A line with a clip.", Audio.tone(440.0, 60.0))
-	_check(Audio.spoken == before + 1, "Events.say still reaches the guide's voice")
+	Narrator.say("A line with a clip.", Audio.tone(440.0, 60.0))
+	_check(Audio.spoken == before + 1, "a Narrator line with a recording reaches the guide's voice")
+	await Narrator.wait_quiet()
+	Narrator.say("A line nobody has recorded yet.")
+	_check(Audio.speech[Audio.speech.size() - 1] == "say: A line nobody has recorded yet.",
+		"a line with no recording goes to text-to-speech")
+	Events.read_aloud.emit("Shop page")
+	_check(Audio.speech[Audio.speech.size() - 1] == "say: A line nobody has recorded yet.",
+		"reading a button aloud never talks over the guide")
 	before = Audio.cued
 	Events.play_at(Audio.tone(880.0, 60.0), Vector3.ZERO)
 	_check(Audio.cued > before, "Events.play_at still plays a stream the caller is holding")
@@ -1089,7 +1191,14 @@ func _audio() -> void:
 ## board can never disagree — and a module that breaks is named, not just
 ## counted.
 func _module_checks() -> void:
-	await _go("res://levels/testbed/testbed.tscn")
+	var stones := Inventory.count(STONE)
+	var done := Tasks.times_done(&"welcome")
+	await _go(Profile.TESTBED)
+	await _settle() # the profile is swapped on the way: one more fade
+	_check(Profile.is_test_room() and Game.level.level_id == &"testbed",
+		"asking for the Test Room opens it on its own profile")
+	_check(Inventory.count(STONE) == 0 and Tasks.times_done(&"welcome") == 0,
+		"the Test Room starts empty, whoever was playing")
 	var board := Game.level.get_node(^"Board") as CheckBoard
 	var stations := board.stations()
 	_check(stations.size() == 13, "the Test Room has a station for every module (%d)" % stations.size())
@@ -1102,13 +1211,16 @@ func _module_checks() -> void:
 	for station: ModuleCheck in stations:
 		_check(station.verdict == ModuleCheck.Verdict.PASS,
 			"%s: %s [%s]" % [station.title, station.pass_when, station.note])
+	Profile.switch(PROFILE)
+	await _settle()
+	await _settle()
+	_check(Profile.id == PROFILE and Inventory.count(STONE) == stones and Tasks.times_done(&"welcome") == done,
+		"leaving the Test Room gives the player back untouched by the hand tests (%d stones)" % Inventory.count(STONE))
 	_finished += 1
 
 
-## The wrist menu, driven the way a child drives it: a fingertip touches the
-## star, pokes buttons while the world is paused, and every page still stands
-## with the module it needs switched off. The fingertip is a bare node in group
-## "hand", which is all the menu asks of a hand.
+## Touch the wrist star, then use tracked aim poses and trigger input while
+## paused. Every page still stands with its optional module switched off.
 func _menu() -> void:
 	var menu := Game.module(&"Menu")
 	if menu == null:
@@ -1124,6 +1236,16 @@ func _menu() -> void:
 	finger.add_to_group(&"hand")
 	add_child(finger)
 	finger.global_position = MENU_AWAY
+	var controller := Game.player.get_node(^"RightController") as XRController3D
+	var previous_tracker := controller.tracker
+	var tracker := XRControllerTracker.new()
+	tracker.name = &"/smoke/menu/right"
+	tracker.type = XRServer.TRACKER_CONTROLLER
+	XRServer.add_tracker(tracker)
+	tracker.set_pose(&"default", Transform3D(Basis.IDENTITY, MENU_AWAY), Vector3.ZERO, Vector3.ZERO,
+		XRPose.XR_TRACKING_CONFIDENCE_HIGH)
+	tracker.set_input(&"trigger_click", false)
+	controller.tracker = tracker.name
 	var facts := PackedStringArray()
 	var toggles: Array[bool] = []
 	var judged: Array[StringName] = []
@@ -1146,11 +1268,17 @@ func _menu() -> void:
 			hand.global_position = MENU_AWAY + Vector3(parked.size(), 0.0, 0.0)
 	await _frames(3)
 
+	await Narrator.wait_quiet() # nothing of the game's own left to say: the lines below are the test's
 	# The wrist: always there, and fed by the bus rather than by polling.
 	_check(menu.star() != null and menu.star().is_inside_tree(), "the star is on the left wrist")
 	_check(menu.readout_text().contains("Magic Stones"), "the wrist counts Magic Stones next to the star")
-	Events.goal_changed.emit("Find the red flower", &"meadow")
+	var real_goal := Events.goal
+	var fake := Goal.new()
+	fake.task = &"fake"
+	fake.text = "Find the red flower"
+	Events.set_goal(fake)
 	_check(menu.readout_text().contains("Find the red flower"), "the wrist shows a new goal the moment it is sent")
+	Events.set_goal(real_goal)
 
 	# Touching the star with the other hand opens the menu and stops the world.
 	finger.global_position = menu.star().global_position
@@ -1158,41 +1286,125 @@ func _menu() -> void:
 	_check(menu.is_open and get_tree().paused, "touching the star opens the menu and pauses the world")
 	_check(toggles.size() == 1 and toggles[0], "menu_toggled(true) goes out once")
 	_check(facts.has("opened:menu"), "opening reports opened:menu")
+	_check(not menu.star().is_visible_in_tree(), "the wrist hides while the panel is open")
+	finger.global_position = MENU_AWAY
+	await _frames(3)
+	finger.global_position = menu.star().global_position
+	await _frames(3)
+	_check(menu.is_open and toggles.size() == 1, "reaching back across the wrist does not close the panel")
 	finger.global_position = MENU_AWAY
 	await _frames(3)
 
-	# One poke is one press, however long the finger rests there.
-	var tab: PokeButton = menu.find_button(&"menu_tab_tasks")
-	finger.global_position = tab.global_transform * Vector3(0.0, 0.0, PokeButton.THICKNESS + 0.04)
+	# Lines said while the menu is open wait: nothing is shown or heard, in order.
+	var subtitle := Label3D.new()
+	subtitle.set_script(load("res://player/subtitle.gd"))
+	add_child(subtitle)
+	Settings.set_value(&"subtitles", true)
+	Narrator.say("First line.")
+	Narrator.say("Next line.")
+	await get_tree().create_timer(0.4).timeout
+	_check(Narrator.current == null and not subtitle.visible,
+		"lines said while the menu is open are neither shown nor heard until it closes")
+	await _click_menu(tracker, &"menu_close")
+	_check(not menu.is_open and subtitle.visible and subtitle.text == "First line."
+		and Narrator.current.text == "First line.",
+		"closing the menu starts the first line: on screen and in the voice together")
+	_check(menu.star().is_visible_in_tree(), "closing restores the wrist entry")
+	await _until(func() -> bool: return Narrator.current != null and Narrator.current.text == "Next line.", 300)
+	_check(subtitle.text == "Next line.", "then the next line, in order, still the same on screen as in the voice")
+	menu.open()
+	await _frames(2) # Narrator observes the tree pause in its process step
+	_check(not subtitle.visible and Narrator.current.text == "Next line.",
+		"opening the menu stops the line on show; it waits to start again")
+	Settings.set_value(&"subtitles", false)
+	menu.close()
+	_check(not subtitle.visible, "subtitles switched off in the menu stay off after closing")
+	Settings.set_value(&"subtitles", true)
+	await Narrator.wait_quiet()
+	subtitle.free()
+	menu.open()
+
+	# Trigger edges survive rebuilding the page under the held trigger.
+	_aim_menu(tracker, menu.find_button(&"menu_tab_tasks").global_position)
 	await _frames(3)
-	finger.global_position = tab.global_transform * Vector3(0.0, 0.0, PokeButton.THICKNESS)
+	tracker.set_input(&"trigger_click", true)
 	await _frames(40)
-	_check(facts.count("pressed:menu_tab_tasks") == 1, "a fingertip resting on a button presses it exactly once")
-	_check(menu.page == &"tasks", "the press does what the button says")
-	finger.global_position = MENU_AWAY
+	_check(facts.count("pressed:menu_tab_tasks") == 1, "holding the trigger across a page rebuild clicks exactly once")
+	_check(menu.page == &"tasks", "the ray click opens its page while paused")
+	_aim_menu(tracker, menu.find_button(&"menu_tab_bag").global_position)
+	await _frames(3)
+	_check(not facts.has("pressed:menu_tab_bag"), "dragging a held trigger onto another button does not click")
+	tracker.set_input(&"trigger_click", false)
 	await _frames(3)
 
-	# A hand pulled back out through the panel, from behind, presses nothing.
-	var bag_tab: PokeButton = menu.find_button(&"menu_tab_bag")
-	for depth in [-0.05, -0.02, 0.0, 0.04, 0.1]:
-		finger.global_position = bag_tab.global_transform * Vector3(0.0, 0.0, PokeButton.THICKNESS + depth)
-		await _frames(2)
-	_check(not facts.has("pressed:menu_tab_bag"), "pulling a hand back out through the panel presses nothing")
-	finger.global_position = MENU_AWAY
+	# A ray from behind the panel cannot select it.
+	var bag_tab: RayButton = menu.find_button(&"menu_tab_bag")
+	var back := bag_tab.global_position - bag_tab.global_basis.z * 0.4
+	_aim_menu(tracker, bag_tab.global_position, back)
 	await _frames(3)
+	tracker.set_input(&"trigger_click", true)
+	await _frames(3)
+	_check(not facts.has("pressed:menu_tab_bag"), "a ray behind the panel cannot click through it")
+	tracker.set_input(&"trigger_click", false)
 
-	# Pointing reads aloud; it does not press.
+	# Pointing reads aloud without pressing, using aim rather than the parked grip.
 	if audio:
-		var shop_tab: PokeButton = menu.find_button(&"menu_tab_shop")
-		finger.global_position = shop_tab.global_transform * Vector3(0.0, 0.0, PokeButton.THICKNESS + 0.04)
-		await get_tree().create_timer(PokeButton.DWELL + 0.25).timeout
+		_aim_menu(tracker, menu.find_button(&"menu_tab_shop").global_position)
+		await get_tree().create_timer(RayButton.DWELL + 0.25).timeout
 		_check(not audio.speech.is_empty() and audio.speech[audio.speech.size() - 1] == "read: Shop page",
-			"a fingertip held near a button has its label read aloud")
-		_check(not facts.has("pressed:menu_tab_shop"), "near is not pressed")
-		finger.global_position = MENU_AWAY
-		Events.say("A line nobody has recorded yet.")
-		_check(audio.speech[audio.speech.size() - 1] == "say: A line nobody has recorded yet.",
-			"an instruction with no recording goes to text-to-speech")
+			"pointing at a button reads its label aloud")
+		_check(not facts.has("pressed:menu_tab_shop"), "aiming without the trigger never clicks")
+
+	# Tracking loss hides the ray; regaining it with a held trigger is not a click.
+	tracker.invalidate_pose(&"aim")
+	tracker.set_input(&"trigger_click", true)
+	await _frames(3)
+	_check(not Game.player.get_node(^"RightControllerMenuPointer").visible, "lost aim tracking hides the ray")
+	_aim_menu(tracker, menu.find_button(&"menu_tab_shop").global_position)
+	await _frames(3)
+	_check(not facts.has("pressed:menu_tab_shop"), "restoring tracking with the trigger held does not click")
+	tracker.set_input(&"trigger_click", false)
+	await _frames(3)
+
+	# Both hands can select; simultaneous triggers over one button click once.
+	var left_controller := Game.player.get_node(^"LeftController") as XRController3D
+	var previous_left_tracker := left_controller.tracker
+	var left_tracker := XRControllerTracker.new()
+	left_tracker.name = &"/smoke/menu/left"
+	left_tracker.type = XRServer.TRACKER_CONTROLLER
+	XRServer.add_tracker(left_tracker)
+	left_controller.tracker = left_tracker.name
+	left_tracker.set_input(&"trigger_click", false)
+	var home: Vector3 = menu.find_button(&"menu_tab_home").global_position
+	_aim_menu(left_tracker, home)
+	_aim_menu(tracker, home)
+	await _frames(3)
+	var home_clicks := facts.count("pressed:menu_tab_home")
+	left_tracker.set_input(&"trigger_click", true)
+	tracker.set_input(&"trigger_click", true)
+	await _frames(3)
+	_check(facts.count("pressed:menu_tab_home") == home_clicks + 1,
+		"two triggers on the same button in one frame produce one click")
+	left_tracker.set_input(&"trigger_click", false)
+	tracker.set_input(&"trigger_click", false)
+	await _frames(3)
+	await _click_menu(left_tracker, &"menu_tab_bag")
+	_check(menu.page == &"bag", "the left controller can click the menu too")
+	left_controller.tracker = previous_left_tracker
+	XRServer.remove_tracker(left_tracker)
+
+	# Updating tracked poses after closing cannot make the ray reappear.
+	menu.close()
+	_aim_menu(tracker, home)
+	await _frames(3)
+	_check(not Game.player.get_node(^"RightControllerMenuPointer").visible, "tracking updates leave the ray hidden while the menu is closed")
+	tracker.set_input(&"trigger_click", true)
+	menu.open()
+	_aim_menu(tracker, menu.find_button(&"menu_tab_bag").global_position)
+	await _frames(3)
+	_check(menu.page == &"home", "opening with the trigger held waits for a release")
+	tracker.set_input(&"trigger_click", false)
+	await _frames(3)
 
 	# The shop: enough stones buys, too few is a gentle no and costs nothing.
 	var chair := ItemDef.find(&"chair")
@@ -1202,12 +1414,12 @@ func _menu() -> void:
 	Inventory.add(&"magic_stone", price)
 	var chairs := Inventory.count(&"chair")
 	menu.show_page(&"shop")
-	await _poke(finger, &"menu_buy_chair")
+	await _click_menu(tracker, &"menu_buy_chair")
 	_check(Inventory.count(&"magic_stone") == 0 and Inventory.count(&"chair") == chairs + 1,
 		"buying spends the stones and puts the chair in the bag")
 	_check(facts.has("bought:chair") and judged.has(&"reward"), "a purchase reports bought:chair and is a reward")
 	if price > 0:
-		await _poke(finger, &"menu_buy_chair")
+		await _click_menu(tracker, &"menu_buy_chair")
 		_check(Inventory.count(&"chair") == chairs + 1 and Inventory.count(&"magic_stone") == 0,
 			"with too few stones nothing is bought and nothing is spent")
 		_check(not judged.is_empty() and judged[judged.size() - 1] == &"bad", "too few stones is judged bad")
@@ -1219,14 +1431,14 @@ func _menu() -> void:
 	for connection in listeners:
 		Events.place_requested.disconnect(connection.callable)
 	menu.show_page(&"bag")
-	await _poke(finger, &"menu_take_out_chair")
+	await _click_menu(tracker, &"menu_take_out_chair")
 	_check(menu.is_open and Inventory.count(&"chair") == chairs + 1 and menu.page_text().contains("nowhere"),
 		"with nowhere to put it, Take out says so and the chair stays in the bag")
 	for connection in listeners:
 		Events.place_requested.connect(connection.callable, connection.flags)
 
 	# The bag: taking something out asks the world for it and gets out of the way.
-	await _poke(finger, &"menu_take_out_chair")
+	await _click_menu(tracker, &"menu_take_out_chair")
 	_check(requested.has(&"chair"), "Take out asks the world to place a chair")
 	_check(not menu.is_open and not get_tree().paused, "taking something out closes the menu and the world goes on")
 
@@ -1234,26 +1446,25 @@ func _menu() -> void:
 	menu.open()
 	menu.show_page(&"settings")
 	var volume: float = Settings.value(&"volume_master")
-	await _poke(finger, &"menu_set_volume_master_down")
+	await _click_menu(tracker, &"menu_set_volume_master_down")
 	_check(is_equal_approx(Settings.value(&"volume_master"), volume - 0.1),
 		"a setting changed on the page reaches Settings")
 	Settings.reload()
 	_check(is_equal_approx(Settings.value(&"volume_master"), volume - 0.1),
 		"and survives re-reading the settings file")
 
-	# A poke landing between two neighbours presses one of them, not both.
-	var less: PokeButton = menu.find_button(&"menu_set_volume_voice_down")
-	var more: PokeButton = menu.find_button(&"menu_set_volume_voice_up")
+	# The gap has no target: one trigger cannot select both neighbouring buttons.
+	var less: RayButton = menu.find_button(&"menu_set_volume_voice_down")
+	var more: RayButton = menu.find_button(&"menu_set_volume_voice_up")
 	var between := (less.global_position + more.global_position) * 0.5
-	var face := less.global_basis.z.normalized()
-	finger.global_position = between + face * (PokeButton.THICKNESS + 0.04)
+	_aim_menu(tracker, between)
 	await _frames(3)
-	finger.global_position = between + face * PokeButton.THICKNESS
+	tracker.set_input(&"trigger_click", true)
 	await _frames(3)
-	finger.global_position = MENU_AWAY
+	tracker.set_input(&"trigger_click", false)
 	await _frames(3)
-	_check(facts.count("pressed:menu_set_volume_voice_down") + facts.count("pressed:menu_set_volume_voice_up") == 1,
-		"a poke between two buttons presses exactly one")
+	_check(not facts.has("pressed:menu_set_volume_voice_down") and not facts.has("pressed:menu_set_volume_voice_up"),
+		"clicking the gap between buttons selects neither")
 
 	# Volume never goes to silent from the menu: the clicks and voice are how a
 	# child who cannot read finds their way back.
@@ -1282,12 +1493,12 @@ func _menu() -> void:
 	_check(not get_tree().paused, "and the world runs once nobody holds it")
 	menu.open()
 	menu.show_page(&"settings")
-	await _poke(finger, &"menu_next")
-	await _poke(finger, &"menu_next")
-	await _poke(finger, &"menu_start_over")
+	await _click_menu(tracker, &"menu_next")
+	await _click_menu(tracker, &"menu_next")
+	await _click_menu(tracker, &"menu_start_over")
 	_check(menu.find_button(&"menu_start_over_yes") != null and menu.is_open,
 		"Start over asks before it wipes anything")
-	await _poke(finger, &"menu_start_over_no")
+	await _click_menu(tracker, &"menu_start_over_no")
 	_check(menu.find_button(&"menu_start_over") != null, "and No takes the question back")
 	Settings.reset()
 	menu.close()
@@ -1321,6 +1532,8 @@ func _menu() -> void:
 	Events.menu_toggled.disconnect(on_toggle)
 	Events.feedback.disconnect(on_judge)
 	Events.place_requested.disconnect(on_place)
+	controller.tracker = previous_tracker
+	XRServer.remove_tracker(tracker)
 	finger.queue_free()
 	for hand: Node3D in parked:
 		if is_instance_valid(hand):
@@ -1329,23 +1542,168 @@ func _menu() -> void:
 	_finished += 1
 
 
-## Out of reach of every button, then just in front of [param id], onto its
-## face, and out again: one whole poke, from the front, as a finger does it.
-func _poke(finger: Node3D, id: StringName) -> void:
+## Synthetic tracker input takes the same pose/trigger path as a controller.
+func _click_menu(tracker: XRControllerTracker, id: StringName) -> void:
 	var menu := Game.module(&"Menu")
-	finger.global_position = MENU_AWAY
-	await get_tree().create_timer(PokeButton.REARM + 0.05).timeout # a real finger is not quicker
-	await _frames(2)
-	var button: PokeButton = menu.find_button(id)
+	var button: RayButton = menu.find_button(id)
 	if button == null:
 		_check(false, "the menu shows a %s button (page %s)" % [id, menu.page])
 		return
-	finger.global_position = button.global_transform * Vector3(0.0, 0.0, PokeButton.THICKNESS + 0.04)
-	await _frames(2)
-	finger.global_position = button.global_transform * Vector3(0.0, 0.0, PokeButton.THICKNESS)
+	tracker.set_input(&"trigger_click", false)
+	_aim_menu(tracker, button.global_position)
 	await _frames(3)
-	finger.global_position = MENU_AWAY
+	tracker.set_input(&"trigger_click", true)
 	await _frames(3)
+	tracker.set_input(&"trigger_click", false)
+	await _frames(3)
+
+
+func _aim_menu(tracker: XRControllerTracker, target: Vector3, origin := Vector3.INF) -> void:
+	if origin == Vector3.INF:
+		var camera := Game.player.get_node(^"Camera") as Node3D
+		origin = camera.global_position + camera.global_basis * Vector3(0.25, -0.35, -0.2)
+	var world := Transform3D(Basis.looking_at(target - origin), origin)
+	tracker.set_pose(&"aim", Game.player.global_transform.affine_inverse() * world,
+		Vector3.ZERO, Vector3.ZERO, XRPose.XR_TRACKING_CONFIDENCE_HIGH)
+
+
+## Exercise controller signals, both chord orders and native UI clicks.
+func _controls_and_debug() -> void:
+	var menu := Game.module(&"Menu")
+	var debug := Game.module(&"Debug")
+	menu.close()
+	debug.close()
+	var controllers := [Game.player.get_node(^"LeftController"), Game.player.get_node(^"RightController")]
+	var previous := [controllers[0].tracker, controllers[1].tracker]
+	var trackers: Array[XRControllerTracker] = []
+	for i in 2:
+		var tracker := XRControllerTracker.new()
+		tracker.name = StringName("/smoke/controls/%d" % i)
+		tracker.type = XRServer.TRACKER_CONTROLLER
+		XRServer.add_tracker(tracker)
+		tracker.set_pose(&"default", Transform3D(Basis.IDENTITY, MENU_AWAY), Vector3.ZERO, Vector3.ZERO,
+			XRPose.XR_TRACKING_CONFIDENCE_HIGH)
+		for action in [&"menu_button", &"by_button", &"trigger_click"]:
+			tracker.set_input(action, false)
+		controllers[i].tracker = tracker.name
+		trackers.append(tracker)
+	var left := trackers[0]
+	var right := trackers[1]
+	var facts := PackedStringArray()
+	var on_fact := func(what: StringName, id: StringName, _data: Dictionary) -> void:
+		facts.append("%s:%s" % [what, id])
+	Events.reported.connect(on_fact)
+	await _frames(3)
+
+	left.set_input(&"menu_button", true)
+	await _frames(3)
+	_check(not menu.is_open and not debug.is_open, "Menu down opens neither panel")
+	left.set_input(&"menu_button", false)
+	await _frames(3)
+	_check(menu.is_open and not debug.is_open, "Menu release opens the ordinary menu")
+	left.set_input(&"menu_button", true)
+	await _frames(3)
+	_check(menu.is_open, "holding Menu leaves the current panel alone")
+	left.set_input(&"menu_button", false)
+	await _frames(3)
+	_check(not menu.is_open, "another Menu release closes the ordinary menu")
+
+	for press_y_first in [false, true]:
+		for release_y_first in [false, true]:
+			menu.open() # a chord also replaces an already open ordinary menu
+			facts.clear()
+			var first := &"by_button" if press_y_first else &"menu_button"
+			var second := &"menu_button" if press_y_first else &"by_button"
+			left.set_input(first, true)
+			await _frames(3)
+			_check(not debug.is_open and not facts.has("asked:help"), "the first chord key waits for its partner or release")
+			left.set_input(second, true)
+			await _frames(6)
+			_check(debug.is_open and not menu.is_open and facts.count("asked:debug") == 1,
+				"overlapping Menu/Y opens Debug once (Y first: %s)" % press_y_first)
+			_check(get_tree().paused and not menu.star().is_visible_in_tree(), "Debug pauses play and hides the wrist")
+			left.set_input(&"by_button" if release_y_first else &"menu_button", false)
+			await _frames(3)
+			left.set_input(&"menu_button" if release_y_first else &"by_button", false)
+			await _frames(3)
+			_check(debug.is_open and not menu.is_open and not facts.has("asked:menu") and not facts.has("asked:help"),
+				"either chord release order suppresses ordinary menu and help")
+			debug.close()
+
+	facts.clear()
+	left.set_input(&"by_button", true)
+	await _frames(3)
+	_check(not facts.has("asked:help"), "left Y waits until release for help")
+	left.set_input(&"by_button", false)
+	await _frames(3)
+	_check(facts.count("asked:help") == 1, "left Y alone asks for help once on release")
+	right.set_input(&"by_button", true)
+	await _frames(3)
+	_check(facts.count("asked:help") == 2, "right B still asks for help on press")
+	right.set_input(&"by_button", false)
+	await _frames(3)
+
+	# A second Y press in the same held Menu gesture cannot retrigger Debug.
+	left.set_input(&"menu_button", true)
+	left.set_input(&"by_button", true)
+	await _frames(3)
+	left.set_input(&"by_button", false)
+	await _frames(3)
+	left.set_input(&"by_button", true)
+	await _frames(3)
+	_check(debug.is_open, "a consumed chord cannot toggle twice until both keys are up")
+	left.set_input(&"menu_button", false)
+	left.set_input(&"by_button", false)
+	await _frames(3)
+
+	var panel := Game.player.get_node(^"DebugPanel") as ViewportUI
+	_check(panel.content is PanelContainer and panel.find_children("*", "TouchButton", true, false).is_empty(),
+		"Debug is a Control UI with no old touch buttons")
+	await _click_control(left, panel, &"dbg_saves")
+	_check(panel.content.find_child("Saves", true, false).visible, "left ray clicks the native Saves tab while paused")
+	await _click_control(right, panel, &"dbg_training")
+	_check(panel.content.find_child("Training", true, false).visible, "right ray clicks the native Training tab")
+	Training.unpin_all()
+	Events.trial_started.emit(&"search", Training.condition(&"search").to_log())
+	await _frames(4)
+	var before: float = Training.condition(&"search").value(&"overlap")
+	await _click_control(right, panel, &"dbg_overlap_up")
+	await _click_control(right, panel, &"dbg_overlap_up")
+	_check(Training.is_pinned(&"overlap") and is_equal_approx(Training.condition(&"search").value(&"overlap"), before + 0.1),
+		"two UI nudges accumulate against the next round's pinned value")
+	await _click_control(left, panel, &"dbg_auto")
+	_check(not Training.is_pinned(&"overlap"), "the UI clears difficulty pins")
+	Game.hold_pause(&"headset", true)
+	await _click_control(right, panel, &"dbg_close")
+	_check(not debug.is_open and get_tree().paused, "closing Debug leaves the headset's pause in place")
+	Game.hold_pause(&"headset", false)
+	_check(not get_tree().paused and menu.star().is_visible_in_tree(), "closing the last panel restores play and the wrist")
+
+	# The same chord closes Debug, and its Menu release cannot reopen anything.
+	for _i in 2:
+		left.set_input(&"menu_button", true)
+		left.set_input(&"by_button", true)
+		await _frames(3)
+		left.set_input(&"by_button", false)
+		left.set_input(&"menu_button", false)
+		await _frames(3)
+	_check(not debug.is_open and not menu.is_open and not get_tree().paused, "the closing chord leaves both panels closed")
+	Events.reported.disconnect(on_fact)
+	for i in 2:
+		controllers[i].tracker = previous[i]
+		XRServer.remove_tracker(trackers[i])
+	_finished += 1
+
+
+func _click_control(tracker: XRControllerTracker, panel: ViewportUI, id: StringName) -> void:
+	var button := panel.content.find_child(String(id), true, false) as Button
+	tracker.set_input(&"trigger_click", false)
+	_aim_menu(tracker, panel.button_position(button))
+	await _frames(4)
+	tracker.set_input(&"trigger_click", true)
+	await _frames(4)
+	tracker.set_input(&"trigger_click", false)
+	await _frames(4)
 
 
 func _frames(count: int) -> void:
@@ -1376,17 +1734,21 @@ func _pick(trial: SearchTrial, node: Node3D) -> Dictionary:
 		return {}
 	var logged := {}
 	Events.trial_ended.connect(
-		func(_skill: StringName, _ok: bool, data: Dictionary) -> void: logged.merge(data),
+		func(_visual_skill: StringName, _ok: bool, data: Dictionary) -> void: logged.merge(data),
 		CONNECT_ONE_SHOT)
-	var hand := Node3D.new()
-	(node as Grabbable).grab(hand)
+	var hand := Game.player.get_node(^"RightController/Hand") as Hand
+	_check(hand.hold(node as Grabbable), "the hand takes the selected object")
+	_check(hand.held == null and (node as Grabbable).holder == null,
+		"correct-grab callbacks release both sides of the hold immediately")
 	await get_tree().process_frame
-	hand.free()
 	return logged
 
 
+## Waits for [param trial]'s next round: up to 10 s, as it waits its turn behind
+## the guide's lines.
 func _next_round(trial: Trial) -> void:
-	for _frame in 600:
+	var until := Time.get_ticks_msec() + 10000
+	while Time.get_ticks_msec() < until:
 		if trial.is_running():
 			return
 		await get_tree().process_frame

@@ -1,22 +1,22 @@
 extends ModuleCheck
-## Debug: the hidden panel opens on the Menu button.
-##
-## The one station with nothing on its pedestal — the thing it checks is a
-## controller button, and the panel appears in front of your face, not here.
+## Debug uses native UI and opens only on the Menu + Y chord.
 
 
 func _arm() -> void:
 	update("panel not opened yet")
+	Events.menu_toggled.connect(_on_ui_toggled)
 
 
-func _tick() -> void:
-	if verdict != Verdict.WAITING or not is_instance_valid(Game.player):
-		return
-	var panel := Game.player.get_node_or_null(^"DebugPanel") as Node3D
-	if panel and panel.visible:
-		pass_now("panel open in front of you")
+func _teardown() -> void:
+	if Events.menu_toggled.is_connected(_on_ui_toggled):
+		Events.menu_toggled.disconnect(_on_ui_toggled)
+
+
+func _on_ui_toggled(open: bool) -> void:
+	if open and mod().is_open:
+		pass_now("debug UI open in front of you")
 
 
 func auto() -> void:
-	Events.report(&"asked", &"menu")
-	_tick()
+	Events.report(&"asked", &"debug")
+	mod().close()

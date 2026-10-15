@@ -12,14 +12,14 @@ Three ways, pick whichever you are already holding:
 | where you are | what to do |
 | --- | --- |
 | Godot editor | open `levels/testbed/testbed.tscn`, press **F6** |
-| already in the game (PC or headset) | **Menu** button → **Tests** on the debug panel |
+| already in the game (PC or headset) | **Menu + Y** → **Saves & testing** → **Open Test Room** |
 | cold start, any build | launch with `-- --level=testbed` |
 
 The last one works on the Quest too — `tools\quest.cmd` passes it through — so
 you can go from "APK installed" to "standing in the Test Room" without walking
 the game.
 
-A fourth way, with nobody in the headset: `tools\test.cmd`. It runs every
+A fourth way, with nobody in the headset: `python tools/test.py`. It runs every
 station headless along with the rest of the suite, and prints each verdict by
 name. Exit code 0 means everything passed. It takes about eight seconds.
 
@@ -89,8 +89,8 @@ rule showing itself rather than being claimed.
 | 9 | Audio: table | `Audio` | Press me |
 | 10 | Placement | `Inventory` | Take a chair out, let go, grab it, Put away with the other hand |
 | 11 | Creatures | — | touch the butterfly |
-| 12 | Debug panel | `Debug` | press the Menu button |
-| 13 | Wrist menu | `Menu` | touch the star on your left wrist, then Close |
+| 12 | Debug panel | `Debug` | hold Menu and left Y together; point and trigger to select |
+| 13 | Wrist menu | `Menu` | touch the star on your left wrist, point either controller at Close and press its trigger |
 
 Stations 1, 5 and 11 have no module column because what they check is scene
 nodes and the player rig, not an autoload: there is nothing to untick.
@@ -109,13 +109,13 @@ anything.
 
 - It runs its own throwaway task (`content/tasks/selftest.tres`) and forgets it
   again on reset, so hand-testing never shows up in a child's progress.
-- Its measured round uses its own trial and its own skill
-  (`content/trials/selftest.tres`, skill `selftest`), so pressing a button here
+- Its measured round uses its own trial and its own visual skill
+  (`content/trials/selftest.tres`, visual skill `selftest`), so pressing a button here
   can never move a staircase the game trains. Its lines are still written to
-  `user://metrics/`, one grep away from the real ones.
+  the Test Room profile's own `metrics/`, apart from any child's.
 - Everything else — Magic Stones, the Save station's counter, a caught butterfly —
-  lands in whatever save slot you launched with. Launch with
-  `-- --slot=testbed` if you care about the slot you were playing.
+  lands in the Test Room's own profile, which is wiped every time the room is
+  opened; the child who was playing is untouched.
 
 ## Adding a station
 

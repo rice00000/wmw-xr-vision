@@ -1,6 +1,6 @@
 class_name TrialDef
 extends Resource
-## How one kind of measured round is set up: the skill it trains, its difficulty
+## How one kind of measured round is set up: the visual skill it trains, its difficulty
 ## axes, how quickly help arrives, how a run of rounds is shaped.
 ##
 ## A task is what the child is asked to do; a [TrialDef] is how one round of
@@ -8,13 +8,13 @@ extends Resource
 ## the file name IS the trial id, like ItemDef. A new trial needs a file here and
 ## a [Trial] subclass in modules/trials/<kind>/; a new difficulty axis needs only
 ## a row in [member axes]. Trials know nothing about tasks or stations: tasks
-## read this file to name a task's skills, stations run the rounds it describes.
+## read this file to name a task's visual skills, stations run the rounds it describes.
 
 const DIR := "res://content/trials/"
 
 @export var title := ""
-## Which staircase this trial moves. Trials training the same skill share progress.
-@export var skill: StringName = &"search"
+## Which staircase this trial moves. Trials training the same visual skill share progress.
+@export var visual_skill: StringName = &"search"
 @export var axes: Array[TrialAxis] = []
 ## Free notes: which axis is driven and why, what the contrast metric is, etc.
 @export_multiline var notes := ""
@@ -55,7 +55,7 @@ static func find(trial_id: StringName) -> TrialDef:
 func condition(difficulty: float, round_index := 0, probe := false, overrides: Dictionary = {}) -> TrialCondition:
 	var trial_condition := TrialCondition.new()
 	trial_condition.trial = id
-	trial_condition.skill = skill
+	trial_condition.visual_skill = visual_skill
 	trial_condition.difficulty = difficulty
 	trial_condition.round_index = round_index
 	trial_condition.probe = probe

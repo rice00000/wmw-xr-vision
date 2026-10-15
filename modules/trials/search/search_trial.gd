@@ -97,7 +97,7 @@ func _setup(round_condition: TrialCondition) -> void:
 			body.grabbed.connect(listener)
 			_listeners.append(listener)
 
-	Events.say(prompt % ItemDef.label(_target_id), prompt_voice.get(_target_id))
+	Narrator.say(prompt % ItemDef.label(_target_id), prompt_voice.get(_target_id), &"trial")
 
 
 func _teardown() -> void:
@@ -116,7 +116,7 @@ func _hint(level: int) -> void:
 	var emphasis := _emphasis(_target)
 	match level:
 		1:
-			Events.say(prompt % ItemDef.label(_target_id), prompt_voice.get(_target_id))
+			Narrator.say(prompt % ItemDef.label(_target_id), prompt_voice.get(_target_id), &"trial")
 		2:
 			if emphasis:
 				emphasis.wobble()
@@ -132,10 +132,10 @@ func _on_grabbed(_hand: Node3D, body: Grabbable) -> void:
 	if body == _target:
 		Events.judge(&"good", body.global_position)
 		Events.play_at(correct_sound, body.global_position)
+		_release(body)
 		if highlight:
 			highlight.settle()
 			highlight.outline(correct_color)
-			_release(body)
 			highlight.lift(lift_height)
 		finish(true, {target = _target_id, picked = _target_id})
 		return
@@ -144,7 +144,7 @@ func _on_grabbed(_hand: Node3D, body: Grabbable) -> void:
 	if highlight:
 		highlight.flash(wrong_color)
 	Events.report(&"mispicked", _id_of(body), {position = body.global_position})
-	Events.say(retry)
+	Narrator.say(retry, null, &"trial")
 	count_try()
 
 

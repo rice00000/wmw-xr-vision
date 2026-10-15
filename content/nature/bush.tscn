@@ -1,0 +1,31 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://shared/materials/leaves_bush.tres" id="1_hdqdg"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_lsd1r"]
+material = ExtResource("1_hdqdg")
+radius = 1.0
+height = 2.0
+radial_segments = 8
+rings = 4
+
+[sub_resource type="MultiMesh" id="MultiMesh_imeie"]
+transform_format = 1
+instance_count = 4
+mesh = SubResource("SphereMesh_lsd1r")
+buffer = PackedFloat32Array(0.6, 0, 0, 0, 0, 0.5, 0, 0.42, 0, 0, 0.6, 0, 0.45, 0, 0, 0.45, 0, 0.4, 0, 0.35, 0, 0, 0.45, 0.18, 0.42, 0, 0, -0.4, 0, 0.38, 0, 0.33, 0, 0, 0.42, -0.12, 0.4, 0, 0, 0.05, 0, 0.35, 0, 0.3, 0, 0, 0.4, -0.45)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_8g21b"]
+height = 2.5
+radius = 0.75
+
+[node name="Bush" type="Node3D" unique_id=504469905]
+
+[node name="Leaves" type="MultiMeshInstance3D" parent="." unique_id=1895419739]
+multimesh = SubResource("MultiMesh_imeie")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=613902588]
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=236330643]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+shape = SubResource("CylinderShape3D_8g21b")

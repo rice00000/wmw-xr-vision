@@ -1,0 +1,224 @@
+[gd_scene format=3]
+
+[sub_resource type="StandardMaterial3D" id="Mat_robe"]
+albedo_color = Color(0.27, 0.32, 0.82, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Mat_trim"]
+albedo_color = Color(1, 0.82, 0.25, 1)
+roughness = 0.6
+
+[sub_resource type="StandardMaterial3D" id="Mat_skin"]
+albedo_color = Color(0.96, 0.78, 0.64, 1)
+roughness = 0.8
+
+[sub_resource type="StandardMaterial3D" id="Mat_beard"]
+albedo_color = Color(0.97, 0.97, 0.98, 1)
+roughness = 0.9
+
+[sub_resource type="StandardMaterial3D" id="Mat_eye_white"]
+albedo_color = Color(1, 1, 1, 1)
+roughness = 0.4
+
+[sub_resource type="StandardMaterial3D" id="Mat_pupil"]
+albedo_color = Color(0.07, 0.07, 0.1, 1)
+roughness = 0.3
+
+[sub_resource type="StandardMaterial3D" id="Mat_staff"]
+albedo_color = Color(0.48, 0.31, 0.17, 1)
+roughness = 0.85
+
+[sub_resource type="StandardMaterial3D" id="Mat_glow"]
+albedo_color = Color(1, 0.95, 0.7, 1)
+emission_enabled = true
+emission = Color(1, 0.85, 0.4, 1)
+emission_energy_multiplier = 2.5
+
+[sub_resource type="CylinderMesh" id="Mesh_robe"]
+material = SubResource("Mat_robe")
+top_radius = 0.13
+bottom_radius = 0.34
+height = 0.9
+radial_segments = 16
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_hem"]
+material = SubResource("Mat_trim")
+top_radius = 0.345
+bottom_radius = 0.35
+height = 0.05
+radial_segments = 16
+rings = 1
+
+[sub_resource type="SphereMesh" id="Mesh_head"]
+material = SubResource("Mat_skin")
+radius = 0.12
+height = 0.24
+radial_segments = 16
+rings = 8
+
+[sub_resource type="SphereMesh" id="Mesh_nose"]
+material = SubResource("Mat_skin")
+radius = 0.028
+height = 0.056
+radial_segments = 8
+rings = 4
+
+[sub_resource type="SphereMesh" id="Mesh_eye_white"]
+material = SubResource("Mat_eye_white")
+radius = 0.03
+height = 0.06
+radial_segments = 10
+rings = 5
+
+[sub_resource type="SphereMesh" id="Mesh_pupil"]
+material = SubResource("Mat_pupil")
+radius = 0.017
+height = 0.034
+radial_segments = 8
+rings = 4
+
+[sub_resource type="CylinderMesh" id="Mesh_beard"]
+material = SubResource("Mat_beard")
+top_radius = 0.1
+bottom_radius = 0.015
+height = 0.3
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_brim"]
+material = SubResource("Mat_robe")
+top_radius = 0.21
+bottom_radius = 0.21
+height = 0.025
+radial_segments = 20
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_hat"]
+material = SubResource("Mat_robe")
+top_radius = 0.0
+bottom_radius = 0.14
+height = 0.36
+radial_segments = 16
+rings = 1
+
+[sub_resource type="SphereMesh" id="Mesh_star"]
+material = SubResource("Mat_trim")
+radius = 0.035
+height = 0.07
+radial_segments = 8
+rings = 4
+
+[sub_resource type="CylinderMesh" id="Mesh_sleeve"]
+material = SubResource("Mat_robe")
+top_radius = 0.045
+bottom_radius = 0.07
+height = 0.4
+radial_segments = 10
+rings = 1
+
+[sub_resource type="SphereMesh" id="Mesh_hand"]
+material = SubResource("Mat_skin")
+radius = 0.045
+height = 0.09
+radial_segments = 10
+rings = 5
+
+[sub_resource type="CylinderMesh" id="Mesh_pole"]
+material = SubResource("Mat_staff")
+top_radius = 0.018
+bottom_radius = 0.018
+height = 1.3
+radial_segments = 8
+rings = 1
+
+[sub_resource type="SphereMesh" id="Mesh_glow"]
+material = SubResource("Mat_glow")
+radius = 0.065
+height = 0.13
+radial_segments = 12
+rings = 6
+
+[node name="Wizard" type="Node3D"]
+
+[node name="Body" type="Node3D" parent="."]
+
+[node name="Robe" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+mesh = SubResource("Mesh_robe")
+
+[node name="Hem" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.025, 0)
+mesh = SubResource("Mesh_hem")
+
+[node name="Head" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.02, 0)
+mesh = SubResource("Mesh_head")
+
+[node name="Nose" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, -0.12)
+mesh = SubResource("Mesh_nose")
+
+[node name="EyeLeft" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.045, 1.05, -0.095)
+mesh = SubResource("Mesh_eye_white")
+
+[node name="PupilLeft" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.045, 1.05, -0.12)
+mesh = SubResource("Mesh_pupil")
+
+[node name="EyeRight" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.045, 1.05, -0.095)
+mesh = SubResource("Mesh_eye_white")
+
+[node name="PupilRight" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.045, 1.05, -0.12)
+mesh = SubResource("Mesh_pupil")
+
+[node name="Beard" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.86, -0.07)
+mesh = SubResource("Mesh_beard")
+
+[node name="HatBrim" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.12, 0)
+mesh = SubResource("Mesh_brim")
+
+[node name="Hat" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(0.9962, -0.0872, 0, 0.0872, 0.9962, 0, 0, 0, 1, 0.01, 1.31, 0)
+mesh = SubResource("Mesh_hat")
+
+[node name="HatStar" type="MeshInstance3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.24, -0.12)
+mesh = SubResource("Mesh_star")
+
+[node name="ArmLeft" type="Node3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.17, 0.82, 0)
+
+[node name="Sleeve" type="MeshInstance3D" parent="Body/ArmLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+mesh = SubResource("Mesh_sleeve")
+
+[node name="Hand" type="MeshInstance3D" parent="Body/ArmLeft"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.42, 0)
+mesh = SubResource("Mesh_hand")
+
+[node name="ArmRight" type="Node3D" parent="Body"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.17, 0.82, 0)
+
+[node name="Sleeve" type="MeshInstance3D" parent="Body/ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, 0)
+mesh = SubResource("Mesh_sleeve")
+
+[node name="Hand" type="MeshInstance3D" parent="Body/ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.42, 0)
+mesh = SubResource("Mesh_hand")
+
+[node name="Staff" type="MeshInstance3D" parent="Body/ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.03, -0.17, -0.02)
+mesh = SubResource("Mesh_pole")
+
+[node name="StaffTip" type="Node3D" parent="Body/ArmRight"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.03, 0.5, -0.02)
+
+[node name="Glow" type="MeshInstance3D" parent="Body/ArmRight/StaffTip"]
+mesh = SubResource("Mesh_glow")

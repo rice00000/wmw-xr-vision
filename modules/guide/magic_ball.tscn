@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://components/grabbable.gd" id="1_grab"]
+[ext_resource type="PackedScene" path="res://content/characters/magic_ball.tscn" id="2_visual"]
+
+[sub_resource type="SphereShape3D" id="Shape_ball"]
+radius = 0.08
+
+[node name="MagicBall" type="RigidBody3D"]
+freeze = true
+freeze_mode = 1
+script = ExtResource("1_grab")
+id = &"magic_ball"
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+shape = SubResource("Shape_ball")
+
+[node name="Visual" parent="." instance=ExtResource("2_visual")]

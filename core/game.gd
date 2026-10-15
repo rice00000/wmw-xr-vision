@@ -20,6 +20,9 @@ var level_root: Node
 
 var _xr: XRInterface
 var _changing := false
+## Who is holding the game paused (&"menu", &"headset"...). The tree is paused
+## while anyone is, so one holder letting go never unpauses another's.
+var _pause_holds: Dictionary[StringName, bool] = {}
 
 
 func _ready() -> void:
@@ -30,7 +33,7 @@ func _ready() -> void:
 ## Use it for optional dependencies so modules stay removable:
 ## [codeblock]
 ## var inventory := Game.module(&"Inventory")
-## if inventory: inventory.add(&"coin")
+## if inventory: inventory.add(&"magic_stone")
 ## [/codeblock]
 func module(module_name: StringName) -> Node:
 	if not ProjectSettings.has_setting("autoload/%s" % module_name):
@@ -52,6 +55,21 @@ func change_level(path: String) -> void:
 			level.queue_free()
 		level_root.add_child(load(path).instantiate())
 	_changing = false
+
+
+## Pause the game for [param who] ([param on]), or let go of that pause. The tree
+## stays paused while any holder remains: the wrist menu closing does not end
+## the headset's system-menu pause, nor the other way round.
+func hold_pause(who: StringName, on: bool) -> void:
+	if on:
+		_pause_holds[who] = true
+	else:
+		_pause_holds.erase(who)
+	get_tree().paused = not _pause_holds.is_empty()
+
+
+func is_pause_held(who: StringName) -> bool:
+	return _pause_holds.has(who)
 
 
 ## Called by Level once it is ready.
@@ -97,9 +115,9 @@ func _on_session_begun() -> void:
 
 ## The system menu is over the app: pause and save.
 func _on_session_visible() -> void:
-	get_tree().paused = true
+	hold_pause(&"headset", true)
 	Events.save_requested.emit()
 
 
 func _on_session_focussed() -> void:
-	get_tree().paused = false
+	hold_pause(&"headset", false)

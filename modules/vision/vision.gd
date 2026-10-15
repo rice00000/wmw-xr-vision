@@ -14,7 +14,7 @@ var _outline := ShaderMaterial.new()
 
 
 func _ready() -> void:
-	_outline.shader = preload("res://modules/vision/outline.gdshader")
+	_outline.shader = preload("res://shared/outline.gdshader")
 	Events.level_changed.connect(_on_level_changed)
 	get_tree().node_added.connect(_on_node_added)
 

@@ -1,0 +1,21 @@
+[gd_resource type="Resource" script_class="TaskDef" format=3]
+
+[ext_resource type="Script" path="res://modules/tasks/task_def.gd" id="1_task"]
+[ext_resource type="Script" path="res://modules/tasks/task_step.gd" id="2_step"]
+
+[sub_resource type="Resource" id="Step_rounds"]
+script = ExtResource("2_step")
+count = 5
+trial = &"search"
+place = &"picnic"
+instruction = "Sit at the picnic table. Pick up the thing I name."
+
+[resource]
+script = ExtResource("1_task")
+title = "Find It"
+steps = Array[ExtResource("2_step")]([SubResource("Step_rounds")])
+rewards = Dictionary[StringName, int]({&"magic_stone": 2})
+completed_text = "Five found! Two Magic Stones for you."
+next = &"butterflies"
+requires = Array[StringName]([&"welcome"])
+repeatable = true

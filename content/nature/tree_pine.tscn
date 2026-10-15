@@ -1,0 +1,46 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://shared/materials/bark.tres" id="1_3xhbb"]
+[ext_resource type="Material" path="res://shared/materials/leaves_dark.tres" id="2_8pdm2"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_58gs8"]
+material = ExtResource("1_3xhbb")
+top_radius = 0.14
+bottom_radius = 0.2
+height = 1.4
+radial_segments = 8
+rings = 0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_v76qr"]
+material = ExtResource("2_8pdm2")
+top_radius = 0.0
+bottom_radius = 1.0
+height = 1.0
+radial_segments = 8
+rings = 0
+cap_top = false
+
+[sub_resource type="MultiMesh" id="MultiMesh_3yua5"]
+transform_format = 1
+instance_count = 3
+mesh = SubResource("CylinderMesh_v76qr")
+buffer = PackedFloat32Array(1.4, 0, 0, 0, 0, 2, 0, 2, 0, 0, 1.4, 0, 1.05, 0, 0, 0, 0, 1.7, 0, 3.1, 0, 0, 1.05, 0, 0.7, 0, 0, 0, 0, 1.4, 0, 4.1, 0, 0, 0.7, 0)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_laihm"]
+height = 3.0
+radius = 0.3
+
+[node name="TreePine" type="Node3D" unique_id=1505241284]
+
+[node name="Trunk" type="MeshInstance3D" parent="." unique_id=586692487]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+mesh = SubResource("CylinderMesh_58gs8")
+
+[node name="Needles" type="MultiMeshInstance3D" parent="." unique_id=1753361851]
+multimesh = SubResource("MultiMesh_3yua5")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=2106880515]
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=1440038515]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("CylinderShape3D_laihm")

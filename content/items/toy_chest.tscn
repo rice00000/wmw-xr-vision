@@ -1,0 +1,24 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://components/grabbable.gd" id="1_grab"]
+[ext_resource type="Script" path="res://modules/placement/placeable.gd" id="2_place"]
+[ext_resource type="PackedScene" path="res://content/items/visuals/toy_chest.tscn" id="3_visual"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_body"]
+size = Vector3(0.62, 0.39, 0.4)
+
+[node name="ToyChest" type="RigidBody3D"]
+freeze = true
+script = ExtResource("1_grab")
+release_mode = 1
+id = &"toy_chest"
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.195, 0)
+shape = SubResource("BoxShape3D_body")
+
+[node name="Visual" parent="." instance=ExtResource("3_visual")]
+
+[node name="Placeable" type="Node" parent="."]
+script = ExtResource("2_place")
+item_id = &"toy_chest"

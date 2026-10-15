@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://components/grabbable.gd" id="1_grab"]
+[ext_resource type="Script" path="res://components/highlight.gd" id="2_highlight"]
+[ext_resource type="Script" path="res://components/contrast.gd" id="3_contrast"]
+[ext_resource type="PackedScene" path="res://content/trials/objects/visuals/block.tscn" id="4_visual"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_body"]
+size = Vector3(0.1, 0.1, 0.1)
+
+[node name="Block" type="RigidBody3D"]
+freeze = true
+script = ExtResource("1_grab")
+release_mode = 1
+id = &"block"
+
+[node name="Shape" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+shape = SubResource("BoxShape3D_body")
+
+[node name="Visual" parent="." instance=ExtResource("4_visual")]
+
+[node name="Highlight" type="Node" parent="."]
+script = ExtResource("2_highlight")
+
+[node name="Contrast" type="Node" parent="."]
+script = ExtResource("3_contrast")

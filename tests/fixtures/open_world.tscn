@@ -1,0 +1,90 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://core/level.gd" id="1_level"]
+[ext_resource type="Script" path="res://components/place.gd" id="2_place"]
+[ext_resource type="PackedScene" path="res://content/stations/picnic_station.tscn" id="3_picnic"]
+[ext_resource type="PackedScene" path="res://content/stations/meadow_station.tscn" id="4_meadow"]
+[ext_resource type="PackedScene" path="res://modules/guide/guide_character.tscn" id="5_guide"]
+
+[sub_resource type="BoxShape3D" id="Shape_ground"]
+size = Vector3(60, 0.2, 60)
+
+[sub_resource type="BoxShape3D" id="Shape_wall"]
+size = Vector3(10, 2, 0.6)
+
+[sub_resource type="BoxShape3D" id="Shape_pen_side"]
+size = Vector3(4, 2, 0.4)
+
+[sub_resource type="BoxShape3D" id="Shape_pond"]
+size = Vector3(4, 0.1, 4)
+
+[node name="OpenWorldFixture" type="Node3D"]
+script = ExtResource("1_level")
+level_id = &"island"
+
+[node name="Spawn" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 8)
+
+[node name="Ground" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, 0)
+
+[node name="Shape" type="CollisionShape3D" parent="Ground"]
+shape = SubResource("Shape_ground")
+
+[node name="Wall" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3.5, 1, 0)
+
+[node name="Shape" type="CollisionShape3D" parent="Wall"]
+shape = SubResource("Shape_wall")
+
+[node name="Pond" type="StaticBody3D" parent="." groups=["water"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0.05, 4)
+
+[node name="Shape" type="CollisionShape3D" parent="Pond"]
+shape = SubResource("Shape_pond")
+
+[node name="Pen" type="StaticBody3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 20, 1, 20)
+
+[node name="North" type="CollisionShape3D" parent="Pen"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -1.8)
+shape = SubResource("Shape_pen_side")
+
+[node name="South" type="CollisionShape3D" parent="Pen"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 1.8)
+shape = SubResource("Shape_pen_side")
+
+[node name="West" type="CollisionShape3D" parent="Pen"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -1.8, 0, 0)
+shape = SubResource("Shape_pen_side")
+
+[node name="East" type="CollisionShape3D" parent="Pen"]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 1.8, 0, 0)
+shape = SubResource("Shape_pen_side")
+
+[node name="Dock" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 8)
+script = ExtResource("2_place")
+id = &"dock"
+display_name = "Dock"
+
+[node name="Home" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 14, 0, -14)
+script = ExtResource("2_place")
+id = &"home"
+display_name = "Home"
+
+[node name="Lighthouse" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -25)
+script = ExtResource("2_place")
+id = &"lighthouse"
+display_name = "Lighthouse"
+
+[node name="PicnicStation" parent="." instance=ExtResource("3_picnic")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -10, 0, -8)
+
+[node name="MeadowStation" parent="." instance=ExtResource("4_meadow")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, -6)
+
+[node name="GuideCharacter" parent="." instance=ExtResource("5_guide")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.5, 0, 8.5)

@@ -1,0 +1,20 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://modules/stations/station.tscn" id="1_station"]
+[ext_resource type="PackedScene" path="res://content/stations/meadow.tscn" id="2_visual"]
+[ext_resource type="Script" path="res://modules/trials/catch/catch_trial.gd" id="3_trial"]
+[ext_resource type="PackedScene" path="res://content/creatures/butterfly.tscn" id="4_butterfly"]
+[ext_resource type="Material" path="res://content/stations/meadow_grass.tres" id="5_grass"]
+
+[node name="MeadowStation" instance=ExtResource("1_station")]
+place_id = &"meadow"
+display_name = "Butterfly meadow"
+trial_id = &"catch"
+
+[node name="Visual" parent="." instance=ExtResource("2_visual")]
+
+[node name="Trial" type="Node" parent="Runner" node_paths=PackedStringArray("anchor")]
+script = ExtResource("3_trial")
+creature = ExtResource("4_butterfly")
+anchor = NodePath("../../Place")
+surface = ExtResource("5_grass")

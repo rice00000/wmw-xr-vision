@@ -1,0 +1,32 @@
+[gd_resource type="Resource" script_class="TaskDef" format=3]
+
+[ext_resource type="Script" path="res://modules/tasks/task_def.gd" id="1_task"]
+[ext_resource type="Script" path="res://modules/tasks/task_step.gd" id="2_step"]
+
+[sub_resource type="Resource" id="Step_ball"]
+script = ExtResource("2_step")
+event = "grabbed:magic_ball"
+place = &"dock"
+instruction = "Hello! I am your wizard. Take the glowing ball from my hand. Squeeze to hold it."
+
+[sub_resource type="Resource" id="Step_menu"]
+script = ExtResource("2_step")
+event = "opened:menu"
+instruction = "Look at your left wrist. Touch the star there with your other hand."
+
+[sub_resource type="Resource" id="Step_follow"]
+script = ExtResource("2_step")
+event = "entered:picnic"
+place = &"picnic"
+instruction = "Follow me to the picnic table!"
+
+[resource]
+script = ExtResource("1_task")
+title = "Welcome to the island"
+start_on = "entered:island"
+steps = Array[ExtResource("2_step")]([SubResource("Step_ball"), SubResource("Step_menu"), SubResource("Step_follow")])
+rewards = Dictionary[StringName, int]({&"magic_stone": 1})
+completed_text = "You made it! Here is your first Magic Stone."
+next = &"find_it"
+offered = false
+abandonable = false

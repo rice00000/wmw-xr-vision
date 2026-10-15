@@ -1,0 +1,59 @@
+[gd_resource type="Resource" script_class="TrialDef" format=3]
+
+[ext_resource type="Script" path="res://modules/trials/trial_def.gd" id="1_task"]
+[ext_resource type="Script" path="res://modules/trials/trial_axis.gd" id="2_axis"]
+
+[sub_resource type="Resource" id="Axis_clutter"]
+script = ExtResource("2_axis")
+name = &"clutter"
+easy = 3.0
+hard = 8.0
+driven = false
+fixed = 6.0
+
+[sub_resource type="Resource" id="Axis_overlap"]
+script = ExtResource("2_axis")
+name = &"overlap"
+easy = 0.0
+hard = 1.0
+driven = true
+
+[sub_resource type="Resource" id="Axis_contrast"]
+script = ExtResource("2_axis")
+name = &"contrast"
+easy = 0.9
+hard = 0.2
+driven = false
+fixed = 0.65
+
+[resource]
+script = ExtResource("1_task")
+title = "Find the object"
+skill = &"search"
+axes = Array[ExtResource("2_axis")]([SubResource("Axis_clutter"), SubResource("Axis_overlap"), SubResource("Axis_contrast")])
+notes = "Objects in clutter (design doc section 3).
+
+Driven axis: overlap, and only overlap. Ostrovsky 2009 [2] found newly sighted
+people could not separate still, overlapping objects, which makes occlusion the
+variable worth adapting. Clutter count and contrast stay pinned so a failed round
+is attributable to one thing; raise their fixed values by hand (or pin them from
+the debug menu) to test a different point in the space.
+
+contrast is Weber contrast against the surface the objects sit on:
+c = (L_background - L_target) / L_background, target darker, measured on the
+linear luminance of the albedo. Contrast.background_luminance must match the
+table material (0.34 for shared/materials/floor.tres). Set it per surface.
+
+clutter is capped by the number of distinct object scenes in the SearchTrial,
+since each is placed at most once (naming one object needs exactly one of it).
+Add scenes to widen the range.
+
+Motion is not an axis here on purpose: it is hint level 2. Driving it from both
+the staircase and the help system would move one variable from two places."
+up_after = 2
+step = 0.1
+hint_after = 8.0
+hint_fade = 1.5
+max_hint = 3
+probe_rounds = 3
+probe_difficulty = 0.3

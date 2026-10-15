@@ -46,10 +46,19 @@ func write() -> void:
 		file.store_string(JSON.stringify(JSON.from_native(_data), "\t"))
 
 
-## Switch to another save slot (e.g. one per child) and reload everything from it.
+## Switch to another save slot (e.g. one per child), writing the current one out
+## first so nothing is lost.
 func use_slot(new_slot: String) -> void:
 	write()
 	slot = new_slot
+	reload()
+
+
+## Re-read this slot from disk and put every saveable back to what it says,
+## throwing away anything not written yet. That is "discard my changes", and it
+## is the only honest way to prove a save round trip: writing first would just
+## save the thing you were trying to check had survived.
+func reload() -> void:
 	_read()
 	for node in get_tree().get_nodes_in_group(GROUP):
 		node.load_state(_data.get(_key(node), {}))

@@ -1,0 +1,127 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://content/items/visuals/materials/wood_dark.tres" id="1_wood_dark"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/wood_light.tres" id="2_wood_light"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/red.tres" id="3_red"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/blue.tres" id="4_blue"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/yellow.tres" id="5_yellow"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/green.tres" id="6_green"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/purple.tres" id="7_purple"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/orange.tres" id="8_orange"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_0"]
+size = Vector3(0.03, 1.1, 0.3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_1"]
+size = Vector3(0.03, 1.1, 0.3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_2"]
+size = Vector3(0.8, 1.1, 0.02)
+
+[sub_resource type="BoxMesh" id="BoxMesh_3"]
+size = Vector3(0.74, 0.03, 0.28)
+
+[sub_resource type="BoxMesh" id="BoxMesh_4"]
+size = Vector3(0.74, 0.03, 0.28)
+
+[sub_resource type="BoxMesh" id="BoxMesh_5"]
+size = Vector3(0.74, 0.03, 0.28)
+
+[sub_resource type="BoxMesh" id="BoxMesh_6"]
+size = Vector3(0.74, 0.03, 0.28)
+
+[sub_resource type="BoxMesh" id="BoxMesh_7"]
+size = Vector3(0.06, 0.22, 0.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_8"]
+size = Vector3(0.06, 0.2, 0.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_9"]
+size = Vector3(0.07, 0.24, 0.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_10"]
+size = Vector3(0.06, 0.2, 0.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_11"]
+size = Vector3(0.06, 0.22, 0.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_12"]
+size = Vector3(0.07, 0.18, 0.2)
+
+[sub_resource type="SphereMesh" id="SphereMesh_13"]
+radius = 0.08
+height = 0.16
+radial_segments = 16
+rings = 8
+
+[node name="Bookshelf" type="Node3D"]
+
+[node name="SideL" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.385, 0.55, 0)
+mesh = SubResource("BoxMesh_0")
+surface_material_override/0 = ExtResource("1_wood_dark")
+
+[node name="SideR" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.385, 0.55, 0)
+mesh = SubResource("BoxMesh_1")
+surface_material_override/0 = ExtResource("1_wood_dark")
+
+[node name="Back" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.55, -0.14)
+mesh = SubResource("BoxMesh_2")
+surface_material_override/0 = ExtResource("2_wood_light")
+
+[node name="Shelf0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.015, 0)
+mesh = SubResource("BoxMesh_3")
+surface_material_override/0 = ExtResource("1_wood_dark")
+
+[node name="Shelf1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.37, 0)
+mesh = SubResource("BoxMesh_4")
+surface_material_override/0 = ExtResource("1_wood_dark")
+
+[node name="Shelf2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.73, 0)
+mesh = SubResource("BoxMesh_5")
+surface_material_override/0 = ExtResource("1_wood_dark")
+
+[node name="Shelf3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.085, 0)
+mesh = SubResource("BoxMesh_6")
+surface_material_override/0 = ExtResource("1_wood_dark")
+
+[node name="Book1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.3, 0.495, 0)
+mesh = SubResource("BoxMesh_7")
+surface_material_override/0 = ExtResource("3_red")
+
+[node name="Book2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.23, 0.485, 0)
+mesh = SubResource("BoxMesh_8")
+surface_material_override/0 = ExtResource("4_blue")
+
+[node name="Book3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.155, 0.505, 0)
+mesh = SubResource("BoxMesh_9")
+surface_material_override/0 = ExtResource("5_yellow")
+
+[node name="Book4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 0.845, 0)
+mesh = SubResource("BoxMesh_10")
+surface_material_override/0 = ExtResource("6_green")
+
+[node name="Book5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.17, 0.855, 0)
+mesh = SubResource("BoxMesh_11")
+surface_material_override/0 = ExtResource("7_purple")
+
+[node name="Book6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.245, 0.835, 0)
+mesh = SubResource("BoxMesh_12")
+surface_material_override/0 = ExtResource("8_orange")
+
+[node name="Ball" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.18, 0.11, 0)
+mesh = SubResource("SphereMesh_13")
+surface_material_override/0 = ExtResource("3_red")

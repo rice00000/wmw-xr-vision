@@ -7,4 +7,5 @@
 script = ExtResource("1_item")
 display_name = "Lamp"
 scene = ExtResource("2_scene")
-cost = Dictionary[StringName, int]({&"coin": 3})
+cost = Dictionary[StringName, int]({&"magic_stone": 2})
+in_shop = true

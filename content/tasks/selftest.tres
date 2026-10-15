@@ -1,0 +1,23 @@
+[gd_resource type="Resource" script_class="TaskDef" format=3]
+
+[ext_resource type="Script" path="res://modules/tasks/task_def.gd" id="1_task"]
+[ext_resource type="Script" path="res://modules/tasks/task_step.gd" id="2_step"]
+
+[sub_resource type="Resource" id="Step_1"]
+script = ExtResource("2_step")
+event = "selftest:step"
+instruction = "Self-test step 1 of 2."
+
+[sub_resource type="Resource" id="Step_2"]
+script = ExtResource("2_step")
+event = "selftest:step"
+instruction = "Self-test step 2 of 2."
+
+[resource]
+script = ExtResource("1_task")
+title = "Task self-test"
+steps = Array[ExtResource("2_step")]([SubResource("Step_1"), SubResource("Step_2")])
+rewards = Dictionary[StringName, int]({&"magic_stone": 1})
+completed_text = "Self-test task finished."
+offered = false
+repeatable = true

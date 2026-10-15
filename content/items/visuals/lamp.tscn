@@ -1,0 +1,47 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://content/items/visuals/materials/dark.tres" id="1_dark"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/lamp_shade.tres" id="2_lamp_shade"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_0"]
+top_radius = 0.12
+bottom_radius = 0.13
+height = 0.04
+radial_segments = 16
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
+top_radius = 0.018
+bottom_radius = 0.018
+height = 0.95
+radial_segments = 8
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_2"]
+top_radius = 0.09
+bottom_radius = 0.17
+height = 0.2
+radial_segments = 16
+rings = 1
+
+[node name="Lamp" type="Node3D"]
+
+[node name="Base" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
+mesh = SubResource("CylinderMesh_0")
+surface_material_override/0 = ExtResource("1_dark")
+
+[node name="Pole" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+mesh = SubResource("CylinderMesh_1")
+surface_material_override/0 = ExtResource("1_dark")
+
+[node name="Shade" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.05, 0)
+mesh = SubResource("CylinderMesh_2")
+surface_material_override/0 = ExtResource("2_lamp_shade")
+
+[node name="Light" type="OmniLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0)
+light_color = Color(1, 0.9, 0.7, 1)
+omni_range = 2.5

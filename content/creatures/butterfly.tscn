@@ -2,38 +2,28 @@
 
 [ext_resource type="Script" path="res://modules/creatures/catchable.gd" id="1_catch"]
 [ext_resource type="Script" path="res://modules/creatures/wander.gd" id="2_wander"]
-[ext_resource type="Material" path="res://shared/materials/butterfly_yellow.tres" id="3_wings"]
-[ext_resource type="Material" path="res://shared/materials/dark.tres" id="4_body"]
+[ext_resource type="PackedScene" path="res://content/creatures/butterfly_visual.tscn" id="3_visual"]
+[ext_resource type="Script" path="res://components/highlight.gd" id="4_highlight"]
+[ext_resource type="Script" path="res://components/contrast.gd" id="5_contrast"]
 
 [sub_resource type="SphereShape3D" id="SphereShape3D_catch"]
 radius = 0.16
 
-[sub_resource type="BoxMesh" id="BoxMesh_wing"]
-size = Vector3(0.18, 0.012, 0.14)
-
-[sub_resource type="BoxMesh" id="BoxMesh_body"]
-size = Vector3(0.03, 0.03, 0.16)
-
 [node name="Butterfly" type="Area3D"]
 script = ExtResource("1_catch")
-time_limit = 20.0
 
 [node name="Shape" type="CollisionShape3D" parent="."]
 shape = SubResource("SphereShape3D_catch")
 
-[node name="WingLeft" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.7071, 0.7071, 0, -0.7071, 0.7071, 0, 0, 0, 1, -0.07, 0.06, 0)
-mesh = SubResource("BoxMesh_wing")
-surface_material_override/0 = ExtResource("3_wings")
-
-[node name="WingRight" type="MeshInstance3D" parent="."]
-transform = Transform3D(0.7071, -0.7071, 0, 0.7071, 0.7071, 0, 0, 0, 1, 0.07, 0.06, 0)
-mesh = SubResource("BoxMesh_wing")
-surface_material_override/0 = ExtResource("3_wings")
-
-[node name="Body" type="MeshInstance3D" parent="."]
-mesh = SubResource("BoxMesh_body")
-surface_material_override/0 = ExtResource("4_body")
+[node name="Visual" parent="." instance=ExtResource("3_visual")]
 
 [node name="Wander" type="Node" parent="."]
 script = ExtResource("2_wander")
+radius = 0.25
+height = 0.2
+
+[node name="Highlight" type="Node" parent="."]
+script = ExtResource("4_highlight")
+
+[node name="Contrast" type="Node" parent="."]
+script = ExtResource("5_contrast")

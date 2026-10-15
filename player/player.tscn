@@ -4,7 +4,7 @@
 [ext_resource type="Script" path="res://player/subtitle.gd" id="2_subtitle"]
 [ext_resource type="Script" path="res://player/fader.gd" id="3_fader"]
 [ext_resource type="Script" path="res://player/hand.gd" id="4_hand"]
-[ext_resource type="Script" path="res://player/wrist_info.gd" id="5_wrist"]
+[ext_resource type="Script" path="res://player/feedback.gd" id="5_feedback"]
 [ext_resource type="Script" path="res://player/locomotion.gd" id="6_locomotion"]
 [ext_resource type="Script" path="res://player/teleport.gd" id="7_teleport"]
 
@@ -24,6 +24,12 @@ radius = 0.07
 radius = 0.035
 height = 0.07
 
+[sub_resource type="SphereMesh" id="SphereMesh_fingertip"]
+radius = 0.012
+height = 0.024
+radial_segments = 12
+rings = 6
+
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hand"]
 albedo_color = Color(1, 0.8, 0.65, 1)
 roughness = 0.6
@@ -38,6 +44,7 @@ shading_mode = 0
 albedo_color = Color(0.3, 0.85, 1, 1)
 
 [node name="Player" type="XROrigin3D"]
+process_mode = 3
 script = ExtResource("1_player")
 
 [node name="Camera" type="XRCamera3D" parent="."]
@@ -81,13 +88,11 @@ cast_shadow = 0
 mesh = SubResource("SphereMesh_hand")
 surface_material_override/0 = SubResource("StandardMaterial3D_hand")
 
-[node name="WristInfo" type="Label3D" parent="LeftController"]
-transform = Transform3D(1, 0, 0, 0, 0, 1, 0, -1, 0, 0, 0.04, 0.08)
-pixel_size = 0.0005
-font_size = 40
-outline_size = 10
-horizontal_alignment = 0
-script = ExtResource("5_wrist")
+[node name="Fingertip" type="MeshInstance3D" parent="LeftController/Hand"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.06)
+cast_shadow = 0
+mesh = SubResource("SphereMesh_fingertip")
+surface_material_override/0 = SubResource("StandardMaterial3D_hand")
 
 [node name="RightController" type="XRController3D" parent="."]
 tracker = &"right_hand"
@@ -103,6 +108,12 @@ cast_shadow = 0
 mesh = SubResource("SphereMesh_hand")
 surface_material_override/0 = SubResource("StandardMaterial3D_hand")
 
+[node name="Fingertip" type="MeshInstance3D" parent="RightController/Hand"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.06)
+cast_shadow = 0
+mesh = SubResource("SphereMesh_fingertip")
+surface_material_override/0 = SubResource("StandardMaterial3D_hand")
+
 [node name="Locomotion" type="Node" parent="."]
 script = ExtResource("6_locomotion")
 
@@ -115,3 +126,6 @@ visible = false
 cast_shadow = 0
 mesh = SubResource("CylinderMesh_marker")
 surface_material_override/0 = SubResource("StandardMaterial3D_marker")
+
+[node name="Feedback" type="Node" parent="."]
+script = ExtResource("5_feedback")

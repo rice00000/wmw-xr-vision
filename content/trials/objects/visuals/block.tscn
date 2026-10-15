@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://shared/materials/wood.tres" id="4_material"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_0"]
+size = Vector3(0.1, 0.1, 0.1)
+
+[node name="Block" type="Node3D"]
+
+[node name="Mesh0" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0)
+mesh = SubResource("BoxMesh_0")
+surface_material_override/0 = ExtResource("4_material")
+

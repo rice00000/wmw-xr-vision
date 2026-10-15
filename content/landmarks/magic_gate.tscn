@@ -1,0 +1,51 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://shared/materials/bark.tres" id="1_tgyyh"]
+[ext_resource type="Material" path="res://shared/materials/crystal.tres" id="2_8bne2"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_wakjx"]
+material = ExtResource("1_tgyyh")
+top_radius = 1.0
+bottom_radius = 1.0
+height = 1.0
+radial_segments = 6
+rings = 0
+
+[sub_resource type="MultiMesh" id="MultiMesh_wgxiv"]
+transform_format = 1
+instance_count = 3
+mesh = SubResource("CylinderMesh_wakjx")
+buffer = PackedFloat32Array(0.31956142, -0.19887663, 0, -2, 0.016747506, 3.7947922, 0, 1.9, 0, 0, 0.32, 0, 0.31956142, 0.19887663, 0, 2, -0.016747506, 3.7947922, 0, 1.9, 0, 0, 0.32, 0, -1.3113417e-08, -5.2, 0, 0, 0.3, -2.2729921e-07, 0, 3.7, 0, 0, 0.3, 0)
+
+[sub_resource type="SphereMesh" id="SphereMesh_0iq4d"]
+material = ExtResource("2_8bne2")
+radius = 0.4
+height = 1.2
+radial_segments = 4
+rings = 2
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_u4aeq"]
+size = Vector3(0.8, 3, 0.8)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_tnt85"]
+size = Vector3(0.8, 3, 0.8)
+
+[node name="MagicGate" type="Node3D" unique_id=97555932]
+
+[node name="Logs" type="MultiMeshInstance3D" parent="." unique_id=1114302960]
+multimesh = SubResource("MultiMesh_wgxiv")
+
+[node name="Crystal" type="MeshInstance3D" parent="." unique_id=440693918]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 4.55, 0)
+cast_shadow = 0
+mesh = SubResource("SphereMesh_0iq4d")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=852351260]
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=1876633643]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -2, 1.5, 0)
+shape = SubResource("BoxShape3D_u4aeq")
+
+[node name="Shape2" type="CollisionShape3D" parent="Collision" unique_id=1149495879]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 2, 1.5, 0)
+shape = SubResource("BoxShape3D_tnt85")

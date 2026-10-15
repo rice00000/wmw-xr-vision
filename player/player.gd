@@ -7,7 +7,10 @@ extends XROrigin3D
 ##   - it sets Game.player to itself,
 ##   - its hands call touch() / grab() on things (see hand.gd),
 ##   - its head calls player_entered() on Zones.
-## Child nodes (Locomotion, Teleport, Subtitle...) can be deleted freely.
+## Child nodes (Locomotion, Teleport, Subtitle, Feedback...) can be deleted freely.
+##
+## The rig runs with PROCESS_MODE_ALWAYS so head and hands keep tracking while the
+## wrist menu pauses the tree; its movement and hands check the pause themselves.
 
 @onready var camera := $Camera as XRCamera3D
 
@@ -42,3 +45,5 @@ func _on_head_entered(area: Area3D) -> void:
 func _on_button_pressed(action: String) -> void:
 	if action == "by_button": # B / Y: "what should I do?"
 		Events.report(&"asked", &"help")
+	elif action == "menu_button": # the team's hidden debug panel
+		Events.report(&"asked", &"menu")

@@ -1,0 +1,136 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://content/effects/materials/mark_reward.tres" id="1_fill"]
+[ext_resource type="Material" path="res://content/effects/materials/mark_outline.tres" id="2_outline"]
+
+[sub_resource type="CylinderMesh" id="Disc_0_Outline"]
+top_radius = 0.0450
+bottom_radius = 0.0450
+height = 0.0120
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Disc_0_Fill"]
+top_radius = 0.0380
+bottom_radius = 0.0380
+height = 0.0120
+radial_segments = 12
+rings = 1
+
+[sub_resource type="PrismMesh" id="PrismMesh_1_Outline"]
+left_to_right = 0.5
+size = Vector3(0.0724, 0.0824, 0.0120)
+
+[sub_resource type="PrismMesh" id="PrismMesh_1_Fill"]
+left_to_right = 0.5
+size = Vector3(0.0500, 0.0600, 0.0120)
+
+[sub_resource type="PrismMesh" id="PrismMesh_2_Outline"]
+left_to_right = 0.5
+size = Vector3(0.0724, 0.0824, 0.0120)
+
+[sub_resource type="PrismMesh" id="PrismMesh_2_Fill"]
+left_to_right = 0.5
+size = Vector3(0.0500, 0.0600, 0.0120)
+
+[sub_resource type="PrismMesh" id="PrismMesh_3_Outline"]
+left_to_right = 0.5
+size = Vector3(0.0724, 0.0824, 0.0120)
+
+[sub_resource type="PrismMesh" id="PrismMesh_3_Fill"]
+left_to_right = 0.5
+size = Vector3(0.0500, 0.0600, 0.0120)
+
+[sub_resource type="PrismMesh" id="PrismMesh_4_Outline"]
+left_to_right = 0.5
+size = Vector3(0.0724, 0.0824, 0.0120)
+
+[sub_resource type="PrismMesh" id="PrismMesh_4_Fill"]
+left_to_right = 0.5
+size = Vector3(0.0500, 0.0600, 0.0120)
+
+[sub_resource type="PrismMesh" id="PrismMesh_5_Outline"]
+left_to_right = 0.5
+size = Vector3(0.0724, 0.0824, 0.0120)
+
+[sub_resource type="PrismMesh" id="PrismMesh_5_Fill"]
+left_to_right = 0.5
+size = Vector3(0.0500, 0.0600, 0.0120)
+
+[node name="MarkReward" type="Node3D"]
+
+[node name="Outline" type="Node3D" parent="."]
+
+[node name="Fill" type="Node3D" parent="."]
+
+[node name="Outline0" type="MeshInstance3D" parent="Outline"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0.0000, 0.0000, -0.0080)
+cast_shadow = 0
+mesh = SubResource("Disc_0_Outline")
+surface_material_override/0 = ExtResource("2_outline")
+
+[node name="Fill0" type="MeshInstance3D" parent="Fill"]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0.0000, 0.0000, 0.0000)
+cast_shadow = 0
+mesh = SubResource("Disc_0_Fill")
+surface_material_override/0 = ExtResource("1_fill")
+
+[node name="Outline1" type="MeshInstance3D" parent="Outline"]
+transform = Transform3D(1.0000, -0.0000, 0, 0.0000, 1.0000, 0, 0, 0, 1, 0.0000, 0.0600, -0.0080)
+cast_shadow = 0
+mesh = SubResource("PrismMesh_1_Outline")
+surface_material_override/0 = ExtResource("2_outline")
+
+[node name="Fill1" type="MeshInstance3D" parent="Fill"]
+transform = Transform3D(1.0000, -0.0000, 0, 0.0000, 1.0000, 0, 0, 0, 1, 0.0000, 0.0600, 0.0000)
+cast_shadow = 0
+mesh = SubResource("PrismMesh_1_Fill")
+surface_material_override/0 = ExtResource("1_fill")
+
+[node name="Outline2" type="MeshInstance3D" parent="Outline"]
+transform = Transform3D(0.3090, -0.9511, 0, 0.9511, 0.3090, 0, 0, 0, 1, -0.0571, 0.0185, -0.0080)
+cast_shadow = 0
+mesh = SubResource("PrismMesh_2_Outline")
+surface_material_override/0 = ExtResource("2_outline")
+
+[node name="Fill2" type="MeshInstance3D" parent="Fill"]
+transform = Transform3D(0.3090, -0.9511, 0, 0.9511, 0.3090, 0, 0, 0, 1, -0.0571, 0.0185, 0.0000)
+cast_shadow = 0
+mesh = SubResource("PrismMesh_2_Fill")
+surface_material_override/0 = ExtResource("1_fill")
+
+[node name="Outline3" type="MeshInstance3D" parent="Outline"]
+transform = Transform3D(-0.8090, -0.5878, 0, 0.5878, -0.8090, 0, 0, 0, 1, -0.0353, -0.0485, -0.0080)
+cast_shadow = 0
+mesh = SubResource("PrismMesh_3_Outline")
+surface_material_override/0 = ExtResource("2_outline")
+
+[node name="Fill3" type="MeshInstance3D" parent="Fill"]
+transform = Transform3D(-0.8090, -0.5878, 0, 0.5878, -0.8090, 0, 0, 0, 1, -0.0353, -0.0485, 0.0000)
+cast_shadow = 0
+mesh = SubResource("PrismMesh_3_Fill")
+surface_material_override/0 = ExtResource("1_fill")
+
+[node name="Outline4" type="MeshInstance3D" parent="Outline"]
+transform = Transform3D(-0.8090, 0.5878, 0, -0.5878, -0.8090, 0, 0, 0, 1, 0.0353, -0.0485, -0.0080)
+cast_shadow = 0
+mesh = SubResource("PrismMesh_4_Outline")
+surface_material_override/0 = ExtResource("2_outline")
+
+[node name="Fill4" type="MeshInstance3D" parent="Fill"]
+transform = Transform3D(-0.8090, 0.5878, 0, -0.5878, -0.8090, 0, 0, 0, 1, 0.0353, -0.0485, 0.0000)
+cast_shadow = 0
+mesh = SubResource("PrismMesh_4_Fill")
+surface_material_override/0 = ExtResource("1_fill")
+
+[node name="Outline5" type="MeshInstance3D" parent="Outline"]
+transform = Transform3D(0.3090, 0.9511, 0, -0.9511, 0.3090, 0, 0, 0, 1, 0.0571, 0.0185, -0.0080)
+cast_shadow = 0
+mesh = SubResource("PrismMesh_5_Outline")
+surface_material_override/0 = ExtResource("2_outline")
+
+[node name="Fill5" type="MeshInstance3D" parent="Fill"]
+transform = Transform3D(0.3090, 0.9511, 0, -0.9511, 0.3090, 0, 0, 0, 1, 0.0571, 0.0185, 0.0000)
+cast_shadow = 0
+mesh = SubResource("PrismMesh_5_Fill")
+surface_material_override/0 = ExtResource("1_fill")

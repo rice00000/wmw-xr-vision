@@ -1,0 +1,43 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://content/items/visuals/materials/purple.tres" id="1_purple"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/pink.tres" id="2_pink"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/yellow.tres" id="3_yellow"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_0"]
+top_radius = 0.6
+bottom_radius = 0.6
+height = 0.015
+radial_segments = 32
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
+top_radius = 0.42
+bottom_radius = 0.42
+height = 0.017
+radial_segments = 32
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_2"]
+top_radius = 0.2
+bottom_radius = 0.2
+height = 0.019
+radial_segments = 24
+rings = 1
+
+[node name="Rug" type="Node3D"]
+
+[node name="Rug" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0075, 0)
+mesh = SubResource("CylinderMesh_0")
+surface_material_override/0 = ExtResource("1_purple")
+
+[node name="Ring" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0085, 0)
+mesh = SubResource("CylinderMesh_1")
+surface_material_override/0 = ExtResource("2_pink")
+
+[node name="Middle" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0095, 0)
+mesh = SubResource("CylinderMesh_2")
+surface_material_override/0 = ExtResource("3_yellow")

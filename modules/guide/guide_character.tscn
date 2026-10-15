@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://modules/guide/guide_character.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://content/characters/wizard.tscn" id="2_visual"]
+[ext_resource type="PackedScene" path="res://modules/guide/magic_ball.tscn" id="3_ball"]
+
+[node name="GuideCharacter" type="Node3D"]
+script = ExtResource("1_script")
+ball_scene = ExtResource("3_ball")
+
+[node name="Visual" parent="." instance=ExtResource("2_visual")]
+
+[node name="BallHold" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.17, 0.82, -0.45)

@@ -1,0 +1,43 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://modules/stations/station.gd" id="1_station"]
+[ext_resource type="Script" path="res://components/place.gd" id="2_place"]
+[ext_resource type="Script" path="res://modules/trials/trial_runner.gd" id="3_runner"]
+[ext_resource type="PackedScene" path="res://content/stations/beacon.tscn" id="4_beacon"]
+
+[sub_resource type="CylinderShape3D" id="Shape_zone"]
+height = 2.4
+radius = 0.8
+
+[node name="Station" type="Node3D"]
+script = ExtResource("1_station")
+
+[node name="Place" type="Marker3D" parent="."]
+script = ExtResource("2_place")
+
+[node name="Zone" type="Area3D" parent="."]
+collision_layer = 0
+collision_mask = 0
+monitoring = false
+monitorable = false
+
+[node name="Shape" type="CollisionShape3D" parent="Zone"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
+shape = SubResource("Shape_zone")
+
+[node name="Runner" type="Node" parent="."]
+script = ExtResource("3_runner")
+
+[node name="Sign" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 2.1, -1.6)
+pixel_size = 0.0035
+billboard = 1
+double_sided = false
+modulate = Color(0.92, 0.92, 0.95, 1)
+outline_modulate = Color(0, 0, 0, 1)
+text = "Station"
+font_size = 64
+outline_size = 18
+
+[node name="Beacon" parent="." instance=ExtResource("4_beacon")]
+visible = false

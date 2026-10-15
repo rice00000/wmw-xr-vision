@@ -1,0 +1,116 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://shared/materials/log_wall.tres" id="1_ihb40"]
+[ext_resource type="Material" path="res://shared/materials/roof_tile.tres" id="2_yw460"]
+[ext_resource type="Material" path="res://shared/materials/bark.tres" id="3_wp5ld"]
+[ext_resource type="Material" path="res://shared/materials/cap_dark.tres" id="4_gy3y5"]
+[ext_resource type="Material" path="res://shared/materials/plank.tres" id="5_xqk4q"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_hvk01"]
+material = ExtResource("1_ihb40")
+top_radius = 1.0
+bottom_radius = 1.6
+height = 6.0
+radial_segments = 8
+rings = 0
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_ww1hj"]
+material = ExtResource("2_yw460")
+top_radius = 0.0
+bottom_radius = 1.25
+height = 1.6
+radial_segments = 8
+rings = 0
+cap_top = false
+
+[sub_resource type="BoxMesh" id="BoxMesh_bb4v4"]
+material = ExtResource("3_wp5ld")
+size = Vector3(0.9, 1.6, 0.3)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_6ooi7"]
+material = ExtResource("4_gy3y5")
+top_radius = 0.28
+bottom_radius = 0.28
+height = 0.5
+radial_segments = 8
+rings = 0
+
+[sub_resource type="BoxMesh" id="BoxMesh_tujqb"]
+material = ExtResource("3_wp5ld")
+
+[sub_resource type="MultiMesh" id="MultiMesh_0qmqr"]
+transform_format = 1
+instance_count = 4
+mesh = SubResource("BoxMesh_tujqb")
+buffer = PackedFloat32Array(0.09899495, -2.6870058, 0, -1.3435029, 0.09899495, 2.6870058, 0, 1.3435029, 0, 0, 0.1, 0.2, -0.09899495, -2.6870058, 0, -1.3435029, 0.09899495, -2.6870058, 0, -1.3435029, 0, 0, 0.1, 0.2, -0.098994955, 2.6870055, 0, 1.3435028, -0.09899494, -2.687006, 0, -1.343503, 0, 0, 0.1, 0.2, 0.09899493, 2.6870062, 0, 1.3435031, -0.09899496, 2.6870053, 0, 1.3435026, 0, 0, 0.1, 0.2)
+
+[sub_resource type="BoxMesh" id="BoxMesh_tkv3o"]
+material = ExtResource("5_xqk4q")
+
+[sub_resource type="MultiMesh" id="MultiMesh_qbyhb"]
+transform_format = 1
+instance_count = 4
+mesh = SubResource("BoxMesh_tkv3o")
+buffer = PackedFloat32Array(0.56568545, -2.1213202, 0, -1.1808684, 0.56568545, 2.1213202, 0, 1.8596909, 0, 0, 0.05, 0.22, -0.56568545, -2.1213202, 0, -1.8596909, 0.56568545, -2.1213202, 0, -1.1808684, 0, 0, 0.05, 0.22, -0.56568545, 2.1213202, 0, 1.1808683, -0.5656854, -2.1213205, 0, -1.8596909, 0, 0, 0.05, 0.22, 0.56568533, 2.1213207, 0, 1.8596911, -0.5656855, 2.12132, 0, 1.1808681, 0, 0, 0.05, 0.22)
+
+[sub_resource type="Animation" id="Animation_rh1rs"]
+length = 14.0
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Sails:rotation")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 14),
+"transitions": PackedFloat32Array(1, 1),
+"update": 0,
+"values": [Vector3(0, 0, 0), Vector3(0, 0, -6.2831855)]
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_r4m8b"]
+_data = {
+&"spin": SubResource("Animation_rh1rs")
+}
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_cwifq"]
+height = 3.0
+radius = 1.7
+
+[node name="Windmill" type="Node3D" unique_id=190847730]
+
+[node name="Tower" type="MeshInstance3D" parent="." unique_id=1321652883]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3, 0)
+mesh = SubResource("CylinderMesh_hvk01")
+
+[node name="Cap" type="MeshInstance3D" parent="." unique_id=1995902795]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.8, 0)
+mesh = SubResource("CylinderMesh_ww1hj")
+
+[node name="Door" type="MeshInstance3D" parent="." unique_id=99545969]
+transform = Transform3D(1, 0, 0, 0, 0.9945219, 0.104528464, 0, -0.104528464, 0.9945219, 0, 1.55, 1.42)
+mesh = SubResource("BoxMesh_bb4v4")
+
+[node name="Sails" type="Node3D" parent="." unique_id=1040554717]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 5.5, 1.3)
+
+[node name="Hub" type="MeshInstance3D" parent="Sails" unique_id=1729938613]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 0, 0)
+mesh = SubResource("CylinderMesh_6ooi7")
+
+[node name="Spars" type="MultiMeshInstance3D" parent="Sails" unique_id=1263829150]
+multimesh = SubResource("MultiMesh_0qmqr")
+
+[node name="Panels" type="MultiMeshInstance3D" parent="Sails" unique_id=1667180654]
+multimesh = SubResource("MultiMesh_qbyhb")
+
+[node name="Turning" type="AnimationPlayer" parent="." unique_id=687050641]
+libraries/ = SubResource("AnimationLibrary_r4m8b")
+autoplay = &"spin"
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=641173307]
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=1313597566]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 0)
+shape = SubResource("CylinderShape3D_cwifq")

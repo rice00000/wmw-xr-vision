@@ -1,0 +1,219 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://core/level.gd" id="1_level"]
+[ext_resource type="Material" path="res://shared/materials/dark.tres" id="2_floor"]
+[ext_resource type="Material" path="res://shared/materials/wall.tres" id="3_wall"]
+[ext_resource type="Script" path="res://modules/debug/check_board.gd" id="4_board"]
+[ext_resource type="Script" path="res://modules/debug/checks/check_player.gd" id="5_player"]
+[ext_resource type="Script" path="res://modules/debug/checks/check_save.gd" id="6_save"]
+[ext_resource type="Script" path="res://modules/debug/checks/check_inventory.gd" id="7_inventory"]
+[ext_resource type="Script" path="res://modules/debug/checks/check_task_chain.gd" id="8_chain"]
+[ext_resource type="Script" path="res://modules/debug/checks/check_trial.gd" id="9_trial"]
+[ext_resource type="Script" path="res://modules/debug/checks/check_training.gd" id="10_training"]
+[ext_resource type="Script" path="res://modules/debug/checks/check_vision.gd" id="11_vision"]
+[ext_resource type="Script" path="res://modules/debug/checks/check_audio.gd" id="12_audio"]
+[ext_resource type="Script" path="res://modules/debug/checks/check_placement.gd" id="13_placement"]
+[ext_resource type="Script" path="res://modules/debug/checks/check_creatures.gd" id="14_creatures"]
+[ext_resource type="Script" path="res://modules/debug/checks/check_debug.gd" id="15_debug"]
+[ext_resource type="PackedScene" path="res://content/trials/objects/ball.tscn" id="16_ball"]
+[ext_resource type="PackedScene" path="res://content/trials/objects/cup.tscn" id="17_cup"]
+[ext_resource type="PackedScene" path="res://content/trials/objects/book.tscn" id="18_book"]
+[ext_resource type="PackedScene" path="res://content/trials/objects/kettle.tscn" id="19_kettle"]
+[ext_resource type="Resource" path="res://content/vision/high_contrast.tres" id="20_contrast"]
+[ext_resource type="PackedScene" path="res://content/creatures/butterfly.tscn" id="21_butterfly"]
+[ext_resource type="PackedScene" path="res://components/door.tscn" id="22_door"]
+[ext_resource type="Script" path="res://modules/debug/checks/check_sound_table.gd" id="23_table"]
+[ext_resource type="Script" path="res://modules/debug/checks/check_menu.gd" id="24_menu"]
+[ext_resource type="PackedScene" path="res://content/stations/picnic_station.tscn" id="24_picnic"]
+[ext_resource type="PackedScene" path="res://content/stations/meadow_station.tscn" id="25_meadow"]
+
+[sub_resource type="Environment" id="Environment_testbed"]
+background_mode = 1
+background_color = Color(0.11, 0.12, 0.15, 1)
+ambient_light_source = 2
+ambient_light_color = Color(1, 1, 1, 1)
+ambient_light_energy = 0.9
+
+[node name="TestBed" type="Node3D"]
+script = ExtResource("1_level")
+level_id = &"testbed"
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_testbed")
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.6428, 0.766, 0, -0.766, 0.6428, 0, 4, 0)
+light_energy = 0.7
+
+[node name="Spawn" type="Marker3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 4)
+
+[node name="Geometry" type="Node3D" parent="."]
+
+[node name="Floor" type="CSGBox3D" parent="Geometry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.1, -1)
+use_collision = true
+size = Vector3(10, 0.2, 16)
+material = ExtResource("2_floor")
+
+[node name="WallNorth" type="CSGBox3D" parent="Geometry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, -9)
+use_collision = true
+size = Vector3(10, 3, 0.2)
+material = ExtResource("3_wall")
+
+[node name="WallSouth" type="CSGBox3D" parent="Geometry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.5, 7)
+use_collision = true
+size = Vector3(10, 3, 0.2)
+material = ExtResource("3_wall")
+
+[node name="WallWest" type="CSGBox3D" parent="Geometry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 1.5, -1)
+use_collision = true
+size = Vector3(0.2, 3, 16)
+material = ExtResource("3_wall")
+
+[node name="WallEast" type="CSGBox3D" parent="Geometry"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1.5, -1)
+use_collision = true
+size = Vector3(0.2, 3, 16)
+material = ExtResource("3_wall")
+
+[node name="Board" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -7.8)
+script = ExtResource("4_board")
+
+[node name="Check01Player" type="Node3D" parent="."]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -2.3, 0, 2.5)
+script = ExtResource("5_player")
+title = "Player rig"
+checks = "a hand can grab, and B / Y asks the guide for help"
+action = "grab the ball, then press B or Y"
+pass_when = "both lines below read OK"
+object = ExtResource("16_ball")
+
+[node name="Check02Save" type="Node3D" parent="."]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -2.3, 0, 0.8)
+script = ExtResource("6_save")
+module = &"Save"
+title = "Save"
+checks = "a number written to disk comes back after a reload"
+action = "touch Add 1, then touch Save + reload"
+pass_when = "the counter is still 1 after the reload"
+
+[node name="Check03Inventory" type="Node3D" parent="."]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -2.3, 0, -0.9)
+script = ExtResource("7_inventory")
+module = &"Inventory"
+title = "Inventory"
+checks = "a granted item lands in the count"
+action = "touch Give 1 Magic Stone"
+pass_when = "the Magic Stone count goes up by exactly one"
+item = &"magic_stone"
+
+[node name="Check04Tasks" type="Node3D" parent="."]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -2.3, 0, -2.6)
+script = ExtResource("8_chain")
+module = &"Tasks"
+title = "Tasks: chain"
+checks = "a step advances on its fact, the next follows, the reward is paid"
+action = "touch Report a fact twice"
+pass_when = "both steps done and one Magic Stone paid"
+
+[node name="Check05Trial" type="Node3D" parent="."]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -2.3, 0, -4.3)
+script = ExtResource("9_trial")
+title = "Trials: round"
+checks = "a measured round builds itself, scores the pick and logs it"
+action = "touch Start a round, then grab the object it names"
+pass_when = "picked and wanted are the same object"
+objects = Array[PackedScene]([ExtResource("17_cup"), ExtResource("18_book"), ExtResource("19_kettle"), ExtResource("16_ball")])
+
+[node name="Check06Training" type="Node3D" parent="."]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -2.3, 0, -6)
+script = ExtResource("10_training")
+module = &"Training"
+title = "Training"
+checks = "the staircase rises after two right and falls after one wrong"
+action = "touch Right, Right, then Wrong"
+pass_when = "the four numbers go up, then back down"
+
+[node name="Check07Vision" type="Node3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 2.3, 0, 2.5)
+script = ExtResource("11_vision")
+module = &"Vision"
+title = "Vision"
+checks = "a spirit ability re-grades the whole room, not just the sign"
+action = "touch the spirit orb"
+pass_when = "the room jumps in contrast and the number below changes"
+profile = ExtResource("20_contrast")
+
+[node name="Check08Audio" type="Node3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 2.3, 0, 0.8)
+script = ExtResource("12_audio")
+module = &"Audio"
+title = "Audio: seam"
+checks = "a spoken line and a sound at a place both come out"
+action = "touch Say + beep"
+pass_when = "you hear a beep on your right and the subtitle appears"
+
+[node name="Check09SoundTable" type="Node3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 2.3, 0, -0.9)
+script = ExtResource("23_table")
+module = &"Audio"
+title = "Audio: table"
+checks = "a button is heard, with no audio code behind the button"
+action = "touch Press me"
+pass_when = "you hear it, and the table says which row chose the sound"
+
+[node name="Check10Placement" type="Node3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 2.3, 0, -2.6)
+script = ExtResource("13_placement")
+module = &"Inventory"
+title = "Placement"
+checks = "furniture comes out of the bag into your hand, settles, goes back in"
+action = "Take a chair out, let go, grab it, touch Put away with the other hand"
+pass_when = "all three steps OK and the chair count is back where it was"
+item = &"chair"
+
+[node name="Check11Creatures" type="Node3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 2.3, 0, -4.3)
+script = ExtResource("14_creatures")
+title = "Creatures"
+checks = "touching a creature catches it: it reports the catch and leaves"
+action = "touch the butterfly"
+pass_when = "caught is reported and the butterfly is gone"
+creature = ExtResource("21_butterfly")
+
+[node name="Check12Debug" type="Node3D" parent="."]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, 2.3, 0, -6)
+script = ExtResource("15_debug")
+module = &"Debug"
+title = "Debug panel"
+checks = "the hidden difficulty panel opens on the Menu button"
+action = "press the Menu button on either controller"
+pass_when = "a panel appears in front of your face"
+
+[node name="Check13Menu" type="Node3D" parent="."]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, -2.3, 0, -7.6)
+script = ExtResource("24_menu")
+module = &"Menu"
+title = "Wrist menu"
+checks = "the star on your wrist opens the menu, and the world waits while it is open"
+action = "touch the star on your left wrist with your right hand, then touch Close"
+pass_when = "paused while open, running again after"
+
+[node name="DoorIsland" parent="." instance=ExtResource("22_door")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3.5, 0, 6.6)
+id = &"door_island"
+target_level = "res://levels/island/island.tscn"
+label = "Back to the island"
+
+[node name="PicnicStation" parent="." instance=ExtResource("24_picnic")]
+transform = Transform3D(0, 0, 1, 0, 1, 0, -1, 0, 0, -3.9, 0, 5.4)
+auto_start = true
+
+[node name="MeadowStation" parent="." instance=ExtResource("25_meadow")]
+transform = Transform3D(0, 0, -1, 0, 1, 0, 1, 0, 0, 3.4, 0, 4.6)
+auto_start = true

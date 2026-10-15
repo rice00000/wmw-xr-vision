@@ -25,7 +25,7 @@ func grab(hand: Node3D) -> bool:
 	freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
 	freeze = true
 	grabbed.emit(hand)
-	Events.report(&"grabbed", id if not id.is_empty() else StringName(name))
+	Events.report(&"grabbed", id if not id.is_empty() else StringName(name), {position = global_position})
 	return true
 
 

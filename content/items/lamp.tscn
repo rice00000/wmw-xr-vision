@@ -2,26 +2,10 @@
 
 [ext_resource type="Script" path="res://components/grabbable.gd" id="1_grab"]
 [ext_resource type="Script" path="res://modules/placement/placeable.gd" id="2_place"]
-[ext_resource type="Material" path="res://shared/materials/dark.tres" id="3_main"]
-[ext_resource type="Material" path="res://shared/materials/lamp.tres" id="4_accent"]
+[ext_resource type="PackedScene" path="res://content/items/visuals/lamp.tscn" id="3_visual"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_body"]
-size = Vector3(0.3, 1.3, 0.3)
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_pole"]
-top_radius = 0.02
-bottom_radius = 0.02
-height = 1.1
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_base"]
-top_radius = 0.14
-bottom_radius = 0.15
-height = 0.04
-
-[sub_resource type="CylinderMesh" id="CylinderMesh_shade"]
-top_radius = 0.1
-bottom_radius = 0.18
-height = 0.2
+size = Vector3(0.3, 1.15, 0.3)
 
 [node name="Lamp" type="RigidBody3D"]
 freeze = true
@@ -30,28 +14,10 @@ release_mode = 1
 id = &"lamp"
 
 [node name="Shape" type="CollisionShape3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.65, 0)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.575, 0)
 shape = SubResource("BoxShape3D_body")
 
-[node name="Base" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.02, 0)
-mesh = SubResource("CylinderMesh_base")
-surface_material_override/0 = ExtResource("3_main")
-
-[node name="Pole" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.59, 0)
-mesh = SubResource("CylinderMesh_pole")
-surface_material_override/0 = ExtResource("3_main")
-
-[node name="Shade" type="MeshInstance3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.2, 0)
-mesh = SubResource("CylinderMesh_shade")
-surface_material_override/0 = ExtResource("4_accent")
-
-[node name="Light" type="OmniLight3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.1, 0)
-light_color = Color(1, 0.9, 0.7, 1)
-omni_range = 3.0
+[node name="Visual" parent="." instance=ExtResource("3_visual")]
 
 [node name="Placeable" type="Node" parent="."]
 script = ExtResource("2_place")

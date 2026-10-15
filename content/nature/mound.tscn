@@ -1,0 +1,27 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://shared/materials/lawn.tres" id="1_ch7d8"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_1itjt"]
+material = ExtResource("1_ch7d8")
+radius = 1.0
+height = 2.0
+radial_segments = 8
+rings = 4
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_kebis"]
+height = 2.5
+radius = 2.9
+
+[node name="Mound" type="Node3D" unique_id=191764632]
+
+[node name="Hill" type="MeshInstance3D" parent="." unique_id=1938853801]
+transform = Transform3D(3.4, 0, 0, 0, 1.2, 0, 0, 0, 3.4, 0, -0.5, 0)
+cast_shadow = 0
+mesh = SubResource("SphereMesh_1itjt")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=17801384]
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=2117423427]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+shape = SubResource("CylinderShape3D_kebis")

@@ -20,12 +20,19 @@ config/icon="res://icon.svg"
 
 Events="*res://core/events.gd"
 Game="*res://core/game.gd"
+Settings="*res://core/settings.gd"
 Save="*res://modules/save/save.gd"
 Inventory="*res://modules/inventory/inventory.gd"
-Quests="*res://modules/quests/quests.gd"
-Training="*res://modules/training/training.gd"
+Tasks="*res://modules/tasks/tasks.gd"
+Training="*res://modules/trials/training.gd"
 Vision="*res://modules/vision/vision.gd"
-Voice="*res://modules/voice/voice.gd"
+Audio="*res://modules/audio/audio.gd"
+Menu="*res://modules/menu/menu.gd"
+Debug="*res://modules/debug/debug.gd"
+
+[audio]
+
+general/text_to_speech=true
 
 [display]
 

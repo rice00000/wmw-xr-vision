@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://content/items/visuals/materials/magic_stone.tres" id="1_magic_stone"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_0"]
+top_radius = 0.045
+bottom_radius = 0
+height = 0.045
+radial_segments = 6
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
+top_radius = 0
+bottom_radius = 0.045
+height = 0.035
+radial_segments = 6
+rings = 1
+
+[node name="MagicStone" type="Node3D"]
+
+[node name="Lower" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0225, 0)
+mesh = SubResource("CylinderMesh_0")
+surface_material_override/0 = ExtResource("1_magic_stone")
+
+[node name="Upper" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.0625, 0)
+mesh = SubResource("CylinderMesh_1")
+surface_material_override/0 = ExtResource("1_magic_stone")

@@ -1,0 +1,28 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://content/items/visuals/materials/pink.tres" id="1_pink"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/purple.tres" id="2_purple"]
+
+[sub_resource type="SphereMesh" id="SphereMesh_0"]
+radius = 0.21
+height = 0.12
+radial_segments = 16
+rings = 8
+
+[sub_resource type="SphereMesh" id="SphereMesh_1"]
+radius = 0.025
+height = 0.02
+radial_segments = 16
+rings = 8
+
+[node name="Cushion" type="Node3D"]
+
+[node name="Cushion" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.06, 0)
+mesh = SubResource("SphereMesh_0")
+surface_material_override/0 = ExtResource("1_pink")
+
+[node name="Button" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.12, 0)
+mesh = SubResource("SphereMesh_1")
+surface_material_override/0 = ExtResource("2_purple")

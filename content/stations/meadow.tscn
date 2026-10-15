@@ -1,0 +1,136 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://content/stations/meadow_grass.tres" id="1_grass"]
+[ext_resource type="Material" path="res://shared/materials/stem.tres" id="2_stem"]
+[ext_resource type="Material" path="res://shared/materials/flower_red.tres" id="3_red"]
+[ext_resource type="Material" path="res://shared/materials/flower_purple.tres" id="4_purple"]
+[ext_resource type="Material" path="res://content/stations/picnic_wood.tres" id="5_wood"]
+
+[sub_resource type="CylinderMesh" id="Mesh_grass"]
+top_radius = 2.3
+bottom_radius = 2.3
+height = 0.02
+radial_segments = 32
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_log"]
+top_radius = 0.17
+bottom_radius = 0.17
+height = 1.1
+radial_segments = 12
+rings = 1
+
+[sub_resource type="CylinderMesh" id="Mesh_stem"]
+top_radius = 0.012
+bottom_radius = 0.015
+height = 0.45
+radial_segments = 6
+rings = 1
+
+[sub_resource type="SphereMesh" id="Mesh_bloom"]
+radius = 0.07
+height = 0.1
+radial_segments = 10
+rings = 5
+
+[node name="Meadow" type="Node3D"]
+
+[node name="Grass" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.01, -0.6)
+mesh = SubResource("Mesh_grass")
+surface_material_override/0 = ExtResource("1_grass")
+
+[node name="Log" type="MeshInstance3D" parent="."]
+transform = Transform3D(0, -1, 0, 1, 0, 0, 0, 0, 1, 0, 0.17, 0.12)
+mesh = SubResource("Mesh_log")
+surface_material_override/0 = ExtResource("5_wood")
+
+[node name="Stem1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3, 0.225, -1.1)
+mesh = SubResource("Mesh_stem")
+surface_material_override/0 = ExtResource("2_stem")
+
+[node name="Bloom1" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.3, 0.47, -1.1)
+mesh = SubResource("Mesh_bloom")
+surface_material_override/0 = ExtResource("3_red")
+
+[node name="Stem2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.225, -1.7)
+mesh = SubResource("Mesh_stem")
+surface_material_override/0 = ExtResource("2_stem")
+
+[node name="Bloom2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.5, 0.47, -1.7)
+mesh = SubResource("Mesh_bloom")
+surface_material_override/0 = ExtResource("4_purple")
+
+[node name="Stem3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0.225, -1.5)
+mesh = SubResource("Mesh_stem")
+surface_material_override/0 = ExtResource("2_stem")
+
+[node name="Bloom3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.6, 0.47, -1.5)
+mesh = SubResource("Mesh_bloom")
+surface_material_override/0 = ExtResource("3_red")
+
+[node name="Stem4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 0.225, -0.9)
+mesh = SubResource("Mesh_stem")
+surface_material_override/0 = ExtResource("2_stem")
+
+[node name="Bloom4" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.4, 0.47, -0.9)
+mesh = SubResource("Mesh_bloom")
+surface_material_override/0 = ExtResource("4_purple")
+
+[node name="Stem5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.7, 0.225, -0.2)
+mesh = SubResource("Mesh_stem")
+surface_material_override/0 = ExtResource("2_stem")
+
+[node name="Bloom5" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1.7, 0.47, -0.2)
+mesh = SubResource("Mesh_bloom")
+surface_material_override/0 = ExtResource("4_purple")
+
+[node name="Stem6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.75, 0.225, 0.1)
+mesh = SubResource("Mesh_stem")
+surface_material_override/0 = ExtResource("2_stem")
+
+[node name="Bloom6" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.75, 0.47, 0.1)
+mesh = SubResource("Mesh_bloom")
+surface_material_override/0 = ExtResource("3_red")
+
+[node name="Stem7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 0.225, -2.0)
+mesh = SubResource("Mesh_stem")
+surface_material_override/0 = ExtResource("2_stem")
+
+[node name="Bloom7" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 0.47, -2.0)
+mesh = SubResource("Mesh_bloom")
+surface_material_override/0 = ExtResource("4_purple")
+
+[node name="Stem8" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 0.225, 0.9)
+mesh = SubResource("Mesh_stem")
+surface_material_override/0 = ExtResource("2_stem")
+
+[node name="Bloom8" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.9, 0.47, 0.9)
+mesh = SubResource("Mesh_bloom")
+surface_material_override/0 = ExtResource("3_red")
+
+[node name="Stem9" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.0, 0.225, 1.0)
+mesh = SubResource("Mesh_stem")
+surface_material_override/0 = ExtResource("2_stem")
+
+[node name="Bloom9" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 1.0, 0.47, 1.0)
+mesh = SubResource("Mesh_bloom")
+surface_material_override/0 = ExtResource("4_purple")

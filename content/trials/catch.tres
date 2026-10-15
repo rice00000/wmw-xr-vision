@@ -1,0 +1,71 @@
+[gd_resource type="Resource" script_class="TrialDef" format=3]
+
+[ext_resource type="Script" path="res://modules/trials/trial_def.gd" id="1_trial"]
+[ext_resource type="Script" path="res://modules/trials/trial_axis.gd" id="2_axis"]
+
+[sub_resource type="Resource" id="Axis_speed"]
+script = ExtResource("2_axis")
+name = &"speed"
+easy = 0.12
+hard = 0.8
+driven = true
+
+[sub_resource type="Resource" id="Axis_size"]
+script = ExtResource("2_axis")
+name = &"size"
+easy = 1.4
+hard = 0.6
+driven = false
+fixed = 1.0
+
+[sub_resource type="Resource" id="Axis_distance"]
+script = ExtResource("2_axis")
+name = &"distance"
+easy = 0.5
+hard = 0.9
+driven = false
+fixed = 0.55
+
+[sub_resource type="Resource" id="Axis_contrast"]
+script = ExtResource("2_axis")
+name = &"contrast"
+easy = 0.9
+hard = 0.2
+driven = false
+fixed = 0.7
+
+[sub_resource type="Resource" id="Axis_time"]
+script = ExtResource("2_axis")
+name = &"time_limit"
+easy = 14.0
+hard = 6.0
+driven = false
+fixed = 12.0
+
+[resource]
+script = ExtResource("1_trial")
+title = "Catch the butterfly"
+skill = &"motion"
+axes = Array[ExtResource("2_axis")]([SubResource("Axis_speed"), SubResource("Axis_size"), SubResource("Axis_distance"), SubResource("Axis_contrast"), SubResource("Axis_time")])
+notes = "One butterfly a round, in front of the child sitting on the log at the
+meadow station. Caught = success, flew away after time_limit = fail.
+
+Driven axis: speed, and only speed. Following a moving target is the skill;
+how big, how far and how faint it is stay pinned so a miss is attributable to
+one thing. Pin the others from the debug menu to test a different point.
+
+distance is metres in front of the child's eyes (within a seated child's
+reach at 0.55). contrast is Weber contrast against the meadow grass material
+(CatchTrial.surface), the same metric as the search trial; it is an
+approximation, since a butterfly at eye height is also seen against the sky.
+
+Hints: 1 says it again and halves the speed, 2 stops it so it hovers and
+flutters in place, 3 outlines it. A hint is help, not difficulty: the speed a
+round was set to is what the log keeps."
+up_after = 2
+step = 0.1
+hint_after = 5.0
+hint_fade = 1.0
+max_hint = 3
+probe_rounds = 2
+probe_difficulty = 0.3

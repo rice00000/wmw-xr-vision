@@ -1,0 +1,75 @@
+key	sound	options	note
+# XRVision sound table. Game code reports what happened; this file says what it sounds like.
+# There is no audio code outside modules/audio — adding a sound means adding a row here.
+#
+# key      dotted. "pressed.hello" falls back to "pressed". Left column = things that happen.
+# sound    res:// clip, or tone:<hz> / tone:<hz>/<ms> for a generated placeholder beep.
+#          Notes joined by + play in turn, 0 Hz is a rest: tone:660/90+0/40+880/200.
+#          Several separated by | are variations. Empty = still fall back (a row to fill in).
+#          A single - means silent, and stops the fallback.
+# options  space in between: vol=-6  pitch=0.9-1.1  bus=voice|sfx|ambience  space=2d|3d
+#          cd=<seconds>  pick=random|cycle  loop
+# note     for people. Ignored.
+#
+# Saving this file takes effect within a second while the game runs from the editor.
+# Mistakes (unknown option, missing clip, duplicate key) are printed at load and fail tools\test.cmd.
+# Keys the game sent that are not here are printed as AUDIO_UNMAPPED and listed in the Test Room.
+
+# ===== interface =====
+pressed	tone:520/70	space=3d cd=0.08	every button in the game, at the button
+pressed.hello	tone:760/110	space=3d	a named button's own sound (the sound-table test uses it as its example)
+pressed.board_run	tone:840/90	space=3d	Test Room: RUN ALL
+pressed.board_reset	tone:300/90	space=3d	Test Room: RESET
+
+# ===== feedback (Events.judge: one sound, one shape mark, one vibration; never colour alone) =====
+# Good and bad differ in rhythm and length as well as pitch, so they are told apart by anyone.
+feedback.good	tone:660/90+880/90+1175/220	space=3d vol=-2	three quick notes going up: yes!
+feedback.bad	tone:330/240+0/70+247/420	space=3d vol=-6	two slow notes going down: oh-oh. Gentle, never a buzzer
+feedback.reward	tone:784/70+988/70+1175/70+1568/380	vol=-1	a sparkling run: something earned
+
+# ===== wrist menu =====
+opened.menu	tone:523/70+784/140	vol=-4	the menu opens: two notes up
+closed.menu	tone:784/70+523/140	vol=-4	the menu closes: the same two notes, down
+accepted	tone:587/110+0/40+880/240	vol=-2	a task taken on from the menu: "let's go"
+bought	tone:262/50+0/30+392/140	vol=-3	bought in the shop; plays under feedback.reward, so it is the low half
+taken_out	tone:440/80+660/160	space=3d vol=-3	an item comes out of the bag into the hand: up
+put_away	tone:660/80+440/160	space=3d vol=-3	an item goes back into the bag: down
+
+# ===== hands =====
+grabbed	tone:380/60	space=3d vol=-4 pitch=0.95-1.08	picking anything up
+grabbed.ball	tone:440/80	space=3d vol=-4	the ball among the Find It objects
+placed	tone:300/140	space=3d vol=-3	furniture set down and settled
+
+# ===== creatures =====
+caught	tone:880/160|tone:990/160|tone:1046/160	space=3d pick=cycle	a creature caught; three notes so three in a row do not sound the same
+escaped	tone:240/220	space=3d vol=-3	one flew away
+
+# ===== the measured round =====
+# The search trial also carries its own clips (SearchTrial.correct_sound / wrong_sound).
+# Those play through Events.play_at and do not come through this table.
+trial.ended.search.hit	tone:900/150	vol=-2	right object picked
+trial.ended.search.miss	tone:200/200	vol=-2	round lost
+mispicked	tone:220/120	space=3d vol=-4	wrong object picked; the round goes on
+trial.started	-		quiet for now: the guide naming the object is the cue. Put a "listen" sound here when one is recorded
+trial.ended	-		quiet for now, except the search rows above: catching a butterfly already sounds on "caught"
+
+# ===== tasks and rewards =====
+task.completed	tone:660/120|tone:880/220	vol=-1 pick=cycle	any task finished
+reward	tone:1046/260	vol=-1	anything granted
+reward.magic_stone	tone:1318/420	vol=0	the Magic Stone: the thing the whole loop is for
+task.started	-		quiet for now: the guide reads the first step out. Put a "new task" sting here when one is recorded
+
+# ===== places =====
+entered	tone:740/110+988/220	vol=-7	arriving at a place or station on the island: a soft "you're here"
+finished	tone:784/200	vol=-1	a trial run reached the number of rounds the task asked for
+used	tone:620/160	space=3d	a spirit ability switched on or off
+asked	-		B / Y. The guide repeating the line is the feedback
+
+# ===== ambience (one loop per level, swapped when the level changes) =====
+# Needs real recordings to be worth switching on; tones would be unbearable in a loop.
+ambience	-		no bed anywhere until there are recordings
+ambience.island		bus=ambience loop vol=-14	birds, wind and small waves
+
+# ===== the Test Room (dev only) =====
+selftest	tone:600/60		the task self-test fact
+pressed.Check09SoundTable_beep	tone:1000/90	space=3d	Test Room: the Audio table station. Its own row so the shared "pressed" cooldown cannot swallow it

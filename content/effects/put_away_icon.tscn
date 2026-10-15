@@ -1,0 +1,112 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://content/effects/materials/mark_put_away.tres" id="1_fill"]
+[ext_resource type="Material" path="res://content/effects/materials/mark_outline.tres" id="2_outline"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_0_Outline"]
+size = Vector3(0.0300, 0.0590, 0.0120)
+
+[sub_resource type="BoxMesh" id="BoxMesh_0_Fill"]
+size = Vector3(0.0160, 0.0450, 0.0120)
+
+[sub_resource type="PrismMesh" id="PrismMesh_1_Outline"]
+left_to_right = 0.5
+size = Vector3(0.0674, 0.0524, 0.0120)
+
+[sub_resource type="PrismMesh" id="PrismMesh_1_Fill"]
+left_to_right = 0.5
+size = Vector3(0.0450, 0.0300, 0.0120)
+
+[sub_resource type="BoxMesh" id="BoxMesh_2_Outline"]
+size = Vector3(0.0940, 0.0260, 0.0120)
+
+[sub_resource type="BoxMesh" id="BoxMesh_2_Fill"]
+size = Vector3(0.0800, 0.0120, 0.0120)
+
+[sub_resource type="BoxMesh" id="BoxMesh_3_Outline"]
+size = Vector3(0.0260, 0.0590, 0.0120)
+
+[sub_resource type="BoxMesh" id="BoxMesh_3_Fill"]
+size = Vector3(0.0120, 0.0450, 0.0120)
+
+[sub_resource type="BoxMesh" id="BoxMesh_4_Outline"]
+size = Vector3(0.0260, 0.0590, 0.0120)
+
+[sub_resource type="BoxMesh" id="BoxMesh_4_Fill"]
+size = Vector3(0.0120, 0.0450, 0.0120)
+
+[node name="PutAwayIcon" type="Node3D"]
+
+[node name="Outline" type="Node3D" parent="."]
+
+[node name="Fill" type="Node3D" parent="."]
+
+[node name="Outline0" type="MeshInstance3D" parent="Outline"]
+transform = Transform3D(1.0000, -0.0000, 0, 0.0000, 1.0000, 0, 0, 0, 1, 0.0000, 0.0450, -0.0080)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_0_Outline")
+surface_material_override/0 = ExtResource("2_outline")
+
+[node name="Fill0" type="MeshInstance3D" parent="Fill"]
+transform = Transform3D(1.0000, -0.0000, 0, 0.0000, 1.0000, 0, 0, 0, 1, 0.0000, 0.0450, 0.0000)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_0_Fill")
+surface_material_override/0 = ExtResource("1_fill")
+
+[node name="Outline1" type="MeshInstance3D" parent="Outline"]
+transform = Transform3D(-1, 0, 0, 0, -1, 0, 0, 0, 1, 0, 0.008, -0.0080)
+cast_shadow = 0
+mesh = SubResource("PrismMesh_1_Outline")
+surface_material_override/0 = ExtResource("2_outline")
+
+[node name="Fill1" type="MeshInstance3D" parent="Fill"]
+transform = Transform3D(-1, 0, 0, 0, -1, 0, 0, 0, 1, 0, 0.008, 0.0000)
+cast_shadow = 0
+mesh = SubResource("PrismMesh_1_Fill")
+surface_material_override/0 = ExtResource("1_fill")
+
+[node name="Outline2" type="MeshInstance3D" parent="Outline"]
+transform = Transform3D(1.0000, -0.0000, 0, 0.0000, 1.0000, 0, 0, 0, 1, 0.0000, -0.0450, -0.0080)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_2_Outline")
+surface_material_override/0 = ExtResource("2_outline")
+
+[node name="Fill2" type="MeshInstance3D" parent="Fill"]
+transform = Transform3D(1.0000, -0.0000, 0, 0.0000, 1.0000, 0, 0, 0, 1, 0.0000, -0.0450, 0.0000)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_2_Fill")
+surface_material_override/0 = ExtResource("1_fill")
+
+[node name="Outline3" type="MeshInstance3D" parent="Outline"]
+transform = Transform3D(1.0000, -0.0000, 0, 0.0000, 1.0000, 0, 0, 0, 1, -0.0350, -0.0280, -0.0080)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_3_Outline")
+surface_material_override/0 = ExtResource("2_outline")
+
+[node name="Fill3" type="MeshInstance3D" parent="Fill"]
+transform = Transform3D(1.0000, -0.0000, 0, 0.0000, 1.0000, 0, 0, 0, 1, -0.0350, -0.0280, 0.0000)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_3_Fill")
+surface_material_override/0 = ExtResource("1_fill")
+
+[node name="Outline4" type="MeshInstance3D" parent="Outline"]
+transform = Transform3D(1.0000, -0.0000, 0, 0.0000, 1.0000, 0, 0, 0, 1, 0.0350, -0.0280, -0.0080)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_4_Outline")
+surface_material_override/0 = ExtResource("2_outline")
+
+[node name="Fill4" type="MeshInstance3D" parent="Fill"]
+transform = Transform3D(1.0000, -0.0000, 0, 0.0000, 1.0000, 0, 0, 0, 1, 0.0350, -0.0280, 0.0000)
+cast_shadow = 0
+mesh = SubResource("BoxMesh_4_Fill")
+surface_material_override/0 = ExtResource("1_fill")
+
+[node name="Label" type="Label3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.085, 0)
+pixel_size = 0.0007
+no_depth_test = true
+render_priority = 12
+outline_render_priority = 11
+font_size = 40
+outline_size = 12
+text = "Put away"

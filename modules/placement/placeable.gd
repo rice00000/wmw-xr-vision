@@ -1,9 +1,11 @@
 class_name Placeable
 extends Node
 ## Child of a Grabbable (release mode STAY) that turns it into decoration:
-## when let go it settles upright on the floor below and reports "placed:<item_id>".
+## when let go it settles upright on whatever is below (floor, table) and reports
+## "placed:<item_id>". Furniture scenes from the shop carry one; see DecorLayout.
 ## Convention: the furniture's origin is at the bottom of the model.
 
+## Empty = the Grabbable's id.
 @export var item_id: StringName = &""
 @export var snap_to_floor := true
 ## > 0 snaps the position to a grid of this size (meters).
@@ -13,10 +15,18 @@ extends Node
 
 
 func _ready() -> void:
+	if item_id.is_empty():
+		item_id = _body.id
 	_body.released.connect(_on_released)
 
 
 func _on_released(_hand: Node3D) -> void:
+	settle()
+	Events.report(&"placed", item_id, {position = _body.global_position})
+
+
+## Stands the body upright on whatever is below it, without reporting anything.
+func settle() -> void:
 	var xform := Transform3D(Basis(Vector3.UP, _body.global_rotation.y), _body.global_position)
 	if grid > 0.0:
 		xform.origin.x = snappedf(xform.origin.x, grid)
@@ -29,4 +39,3 @@ func _on_released(_hand: Node3D) -> void:
 		if not hit.is_empty():
 			xform.origin.y = hit.position.y
 	_body.global_transform = xform
-	Events.report(&"placed", item_id)

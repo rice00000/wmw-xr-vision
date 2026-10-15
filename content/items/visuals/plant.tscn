@@ -1,0 +1,65 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://content/items/visuals/materials/orange.tres" id="1_orange"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/wood_dark.tres" id="2_wood_dark"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/leaf.tres" id="3_leaf"]
+[ext_resource type="Material" path="res://content/items/visuals/materials/green.tres" id="4_green"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_0"]
+top_radius = 0.14
+bottom_radius = 0.11
+height = 0.25
+radial_segments = 16
+rings = 1
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_1"]
+top_radius = 0.13
+bottom_radius = 0.13
+height = 0.02
+radial_segments = 16
+rings = 1
+
+[sub_resource type="SphereMesh" id="SphereMesh_2"]
+radius = 0.17
+height = 0.34
+radial_segments = 16
+rings = 8
+
+[sub_resource type="SphereMesh" id="SphereMesh_3"]
+radius = 0.12
+height = 0.24
+radial_segments = 16
+rings = 8
+
+[sub_resource type="SphereMesh" id="SphereMesh_4"]
+radius = 0.12
+height = 0.24
+radial_segments = 16
+rings = 8
+
+[node name="Plant" type="Node3D"]
+
+[node name="Pot" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.125, 0)
+mesh = SubResource("CylinderMesh_0")
+surface_material_override/0 = ExtResource("1_orange")
+
+[node name="Soil" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.25, 0)
+mesh = SubResource("CylinderMesh_1")
+surface_material_override/0 = ExtResource("2_wood_dark")
+
+[node name="Leaves" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.45, 0)
+mesh = SubResource("SphereMesh_2")
+surface_material_override/0 = ExtResource("3_leaf")
+
+[node name="Leaves2" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.1, 0.38, 0.05)
+mesh = SubResource("SphereMesh_3")
+surface_material_override/0 = ExtResource("4_green")
+
+[node name="Leaves3" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.09, 0.4, -0.05)
+mesh = SubResource("SphereMesh_4")
+surface_material_override/0 = ExtResource("4_green")

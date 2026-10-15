@@ -1,0 +1,30 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://shared/materials/plank.tres" id="1_3ce3m"]
+[ext_resource type="Material" path="res://shared/materials/crystal.tres" id="2_8mqst"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_1j2vv"]
+material = ExtResource("1_3ce3m")
+
+[sub_resource type="MultiMesh" id="MultiMesh_pugfi"]
+transform_format = 1
+instance_count = 7
+mesh = SubResource("BoxMesh_1j2vv")
+buffer = PackedFloat32Array(0.27, 0, 0, -0.6, 0, 0.1, 0, 0.3, 0, 0, 2.1, 0, 0.27, 0, 0, -0.3, 0, 0.1, 0, 0.3, 0, 0, 2.25, 0, 0.27, 0, 0, 0, 0, 0.1, 0, 0.3, 0, 0, 2.4, 0, 0.27, 0, 0, 0.3, 0, 0.1, 0, 0.3, 0, 0, 2.25, 0, 0.27, 0, 0, 0.6, 0, 0.1, 0, 0.3, 0, 0, 2.1, 0, 1.6, 0, 0, 0, 0, 0.08, 0, 0.22, 0, 0, 0.18, -0.8, 1.6, 0, 0, 0, 0, 0.08, 0, 0.22, 0, 0, 0.18, 0.8)
+
+[sub_resource type="SphereMesh" id="SphereMesh_1h48m"]
+material = ExtResource("2_8mqst")
+radius = 0.16
+height = 0.3
+radial_segments = 4
+rings = 2
+
+[node name="Boat" type="Node3D" unique_id=1305267127]
+
+[node name="Planks" type="MultiMeshInstance3D" parent="." unique_id=1309444925]
+multimesh = SubResource("MultiMesh_pugfi")
+
+[node name="MagicStone" type="MeshInstance3D" parent="." unique_id=566696130]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+cast_shadow = 0
+mesh = SubResource("SphereMesh_1h48m")

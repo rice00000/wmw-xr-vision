@@ -1,0 +1,60 @@
+[gd_scene format=3]
+
+[ext_resource type="Material" path="res://shared/materials/plank.tres" id="1_507w1"]
+[ext_resource type="Material" path="res://shared/materials/bark.tres" id="2_bywh6"]
+[ext_resource type="Material" path="res://shared/materials/stripe_red.tres" id="3_pltlf"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_lepck"]
+material = ExtResource("1_507w1")
+size = Vector3(0.1, 1.05, 0.1)
+
+[sub_resource type="BoxMesh" id="BoxMesh_a366n"]
+material = ExtResource("2_bywh6")
+
+[sub_resource type="MultiMesh" id="MultiMesh_cdtcg"]
+transform_format = 1
+instance_count = 1
+mesh = SubResource("BoxMesh_a366n")
+buffer = PackedFloat32Array(0.32, 0, 0, 0, 0, 0.26, 0, 1.18, 0, 0, 0.5, 0)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_peang"]
+material = ExtResource("2_bywh6")
+top_radius = 0.16
+bottom_radius = 0.16
+height = 0.5
+radial_segments = 8
+rings = 0
+
+[sub_resource type="BoxMesh" id="BoxMesh_wy63b"]
+material = ExtResource("3_pltlf")
+
+[sub_resource type="MultiMesh" id="MultiMesh_f7ltn"]
+transform_format = 1
+instance_count = 2
+mesh = SubResource("BoxMesh_wy63b")
+buffer = PackedFloat32Array(0.03, 0, 0, 0.18, 0, 0.34, 0, 1.3, 0, 0, 0.03, 0.12, 0.025, 0, 0, 0.18, 0, 0.12, 0, 1.42, 0, 0, 0.18, 0.03)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_bhrds"]
+size = Vector3(0.35, 2.5, 0.55)
+
+[node name="Mailbox" type="Node3D" unique_id=1830270556]
+
+[node name="Post" type="MeshInstance3D" parent="." unique_id=28927278]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.525, 0)
+mesh = SubResource("BoxMesh_lepck")
+
+[node name="Box" type="MultiMeshInstance3D" parent="." unique_id=508633172]
+multimesh = SubResource("MultiMesh_cdtcg")
+
+[node name="Top" type="MeshInstance3D" parent="." unique_id=1738135621]
+transform = Transform3D(1, 0, 0, 0, -4.371139e-08, -1, 0, 1, -4.371139e-08, 0, 1.31, 0)
+mesh = SubResource("CylinderMesh_peang")
+
+[node name="Flag" type="MultiMeshInstance3D" parent="." unique_id=443816630]
+multimesh = SubResource("MultiMesh_f7ltn")
+
+[node name="Collision" type="StaticBody3D" parent="." unique_id=1073155496]
+
+[node name="Shape1" type="CollisionShape3D" parent="Collision" unique_id=433168973]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.25, 0)
+shape = SubResource("BoxShape3D_bhrds")

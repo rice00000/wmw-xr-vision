@@ -3,7 +3,7 @@
 /content/audio/generated/*.import
 /content/audio/generated/*.wav
 
-# Android build template (installed automatically by tools/quest.ps1 build)
+# Android build template, too big to include
 /android/
 
 # keystore
@@ -12,18 +12,17 @@ export_credentials.cfg
 # build output
 /build/
 *.apk
-
 *.tmp
 
 # OS
 .DS_Store
 Thumbs.db
 desktop.ini
-# local throwaway scripts, but the documented build tooling is part of the repo
+
+# local throwaway scripts
 *.ps1
 *.cmd
-!tools/*.ps1
-!tools/*.cmd
+
 
 # OpenXR Vendors plugin (107 MB of binaries): install from the Asset Library, see README
 /addons/godotopenxrvendors/
@@ -47,7 +46,7 @@ __pycache__/
 .venv/
 venv/
 
-# Editors (personal paths, e.g. the Godot exe in .vscode/settings.json)
+# Editors
 .vscode/
 .idea/
 *.swp

@@ -12,12 +12,13 @@ extends Node
 ## dictionary when the file has nothing for it — so a new player or Start over
 ## can never inherit the last one's stones.
 ##
-## [b]Writing needs no asking.[/b] Saved state only changes on a fact or a round,
-## so the file is rewritten (once per frame at most) after every
-## [signal Events.reported] and [signal Events.trial_ended], and on
-## [signal Events.save_requested], pause, focus loss and quit. Turning the headset
-## off mid-task loses nothing. Each write goes to a temporary file first, so a
-## power cut leaves the last good save rather than half of a new one.
+## [b]Writing needs no asking.[/b] Ordinary changes are batched per frame after
+## Events.reported and Events.trial_ended. Events.save_requested, pause, focus
+## loss and quit write synchronously.
+## Tasks requests a write at activation and after applying completion + rewards.
+## Unfinished tasks restart; inventory, decoration and training remain saved.
+## Each write replaces the file via a temporary file, retaining the old save if
+## writing or renaming fails.
 ##
 ## Files are JSON (types kept via JSON.from_native, never objects). A file from
 ## another [constant VERSION] is not loaded: that player starts fresh.
@@ -36,7 +37,7 @@ func _ready() -> void:
 		_on_node_added(node)
 	Events.reported.connect(func(_what: StringName, _id: StringName, _data_: Dictionary) -> void: request())
 	Events.trial_ended.connect(func(_visual_skill: StringName, _ok: bool, _round: Dictionary) -> void: request())
-	Events.save_requested.connect(request)
+	Events.save_requested.connect(write)
 	Events.profile_closing.connect(write)
 	Events.profile_opened.connect(func(_wiped: bool) -> void: reload())
 
@@ -53,21 +54,32 @@ func _notification(what: int) -> void:
 func request() -> void:
 	if not _queued:
 		_queued = true
-		write.call_deferred()
+		_flush.call_deferred()
+
+
+func _flush() -> void:
+	_queued = false
+	write()
 
 
 func write() -> void:
-	_queued = false
+	# Keep a queued end-of-frame write: later listeners to the same gameplay
+	# event may still update saved state (e.g. Training after task completion).
 	for node in get_tree().get_nodes_in_group(GROUP):
 		_capture(node)
 	var path := Profile.path(Profile.SAVE_FILE)
 	var file := FileAccess.open(path + ".tmp", FileAccess.WRITE)
 	if file == null:
+		push_error("[Save] Cannot open temporary save: %s" % path)
 		return
 	file.store_string(JSON.stringify(JSON.from_native({version = VERSION, nodes = _data}), "\t"))
+	file.flush()
+	var error := file.get_error()
 	file.close()
-	DirAccess.remove_absolute(path)
-	DirAccess.rename_absolute(path + ".tmp", path)
+	if error == OK:
+		error = DirAccess.rename_absolute(path + ".tmp", path)
+	if error != OK:
+		push_error("[Save] Could not replace save (%s): %s" % [error_string(error), path])
 
 
 ## Re-reads the file and puts every saveable back to what it says, throwing away
@@ -85,7 +97,10 @@ func _read() -> void:
 	var path := Profile.path(Profile.SAVE_FILE)
 	if not FileAccess.file_exists(path):
 		return
-	var parsed: Variant = JSON.to_native(JSON.parse_string(FileAccess.get_file_as_string(path)))
+	var encoded: Variant = JSON.parse_string(FileAccess.get_file_as_string(path))
+	# Old plain JSON saves are not JSON.from_native envelopes. Reject them
+	# before decoding, which otherwise raises an engine error instead of resetting.
+	var parsed: Variant = JSON.to_native(encoded) if encoded is Dictionary and encoded.has("type") else null
 	if parsed is Dictionary and parsed.get("version") == VERSION and parsed.get("nodes") is Dictionary:
 		_data = parsed.nodes
 	else:

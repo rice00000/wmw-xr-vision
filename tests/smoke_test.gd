@@ -90,15 +90,13 @@ func _open_world() -> void:
 	_check(Events.goal.place == &"dock" and _last_place() == &"dock",
 		"goal_changed says what to do and that it happens at the dock")
 	_check(Tasks.offers().is_empty(), "nothing is offered while a task is running")
-	_check(not Tasks.accept(&"find_it") and not Tasks.start(&"find_it") and Tasks.current() == &"welcome",
+	_check(not Tasks.accept(&"find_it", &"tutorial") and Tasks.current() == &"welcome",
 		"only one task at a time")
-	_check(not Tasks.abandon() and Tasks.current() == &"welcome", "the welcome cannot be abandoned")
 	var about := Tasks.describe(&"find_it")
 	_check(about.get("title") == "Find It" and about.get("visual_skills") == PackedStringArray(["Finding things in a mess"])
 		and about.get("rewards") == {STONE: 2} and about.get("place") == &"picnic"
-		and about.get("repeatable") == true and about.get("times_done") == 0 and about.get("can_abandon") == true,
-		"describe gives title, visual skill names, rewards, place, repeatable, times done, can abandon")
-	_check(Tasks.describe(&"welcome").get("can_abandon") == false, "describe says the welcome cannot be given up")
+		and about.get("repeatable") == true and about.get("times_done") == 0,
+		"describe gives title, visual skill names, rewards, place, repeatable, times done")
 	_check(Tasks.describe(&"no_such_task").is_empty(), "describe of an unknown task is empty")
 	for task in TaskDef.all():
 		_check(task.rewards.keys().all(func(item: StringName) -> bool: return item == STONE),
@@ -313,6 +311,7 @@ func _open_world() -> void:
 
 	# -- First furniture: buy, take out, put it in the house ------------------
 	_check(Tasks.current() == &"first_furniture" and Events.goal.place == &"", "first_furniture follows")
+	Events.report(&"opened", &"menu")
 	Events.report(&"bought", &"chair") # the shop
 	Events.report(&"taken_out", &"chair") # the bag
 	_check(Events.goal.place == &"home" and _last_place() == &"home", "the last step happens at home")
@@ -444,6 +443,7 @@ func _island_playthrough() -> void:
 	_check(Tasks.current() == &"first_furniture" and Inventory.count(STONE) == 5, "five butterflies: 5 stones, first furniture")
 
 	# Buy a chair, take it out of the bag in the house, let go: it stands on the floor.
+	Events.report(&"opened", &"menu")
 	Events.report(&"bought", &"chair") # what the shop reports
 	Inventory.add(&"chair", 1)
 	var home := Place.find(get_tree(), &"home")
@@ -506,8 +506,8 @@ func _rids(root: Node) -> Array[RID]:
 	return found
 
 
-## After the chain: the menu picks, drops and repeats tasks, and progress
-## survives a save.
+## After the tutorial: choose and repeat tasks, block switching, and restart
+## unfinished tasks after reload while retaining completion and rewards.
 func _replay() -> void:
 	var picnic := Game.level.get_node(^"PicnicStation") as Station
 	var meadow := Game.level.get_node(^"MeadowStation") as Station
@@ -535,8 +535,12 @@ func _replay() -> void:
 		if what == &"finished":
 			finished.append(id)
 	Events.reported.connect(on_finished)
-	_check(Tasks.abandon() and Tasks.current() == &"" and not meadow.is_wanted(),
-		"abandoning drops it and the station stands down")
+	_check(not Tasks.accept(&"find_it", &"practice") and Tasks.current() == &"butterflies",
+		"an active task blocks switching, including between lists")
+	_place_head(Vector3(0.0, 0.0, 8.0))
+	await _physics(3)
+	Save.write()
+	Save.reload()
 	await get_tree().create_timer(0.3).timeout
 	Events.reported.disconnect(on_finished)
 	_check(not catcher.is_running() and not is_instance_valid(butterfly) and _rounds.size() == lines
@@ -544,7 +548,14 @@ func _replay() -> void:
 		"the round in progress is dropped: not logged, not counted, nothing reported finished")
 	_place_head(Vector3(0.0, 0.0, 8.0))
 	await _physics(3)
-	_check(_goals[_goals.size() - 1] == ["", &""], "abandoning empties the goal")
+	_check(Tasks.current() == &"butterflies" and Events.goal.done == 0 and meadow.is_wanted(),
+		"reload cancels the old round and restarts the same task")
+	_place_head(meadow.place.global_position)
+	for _i in 5:
+		await _next_round(catcher)
+		await _catch(catcher)
+	_check(Tasks.current() == &"" and Tasks.times_done(&"butterflies") == 2,
+		"practice completion returns to selection instead of advancing the tutorial")
 	_check(not Tasks.accept(&"welcome") and not Tasks.accept(&"first_furniture"),
 		"a task that is not offered cannot be accepted")
 
@@ -566,42 +577,29 @@ func _replay() -> void:
 	_check(Tasks.current() == &"" and not picnic.is_wanted(), "(progress forgotten in memory)")
 	Save.reload() # ...and get it back off disk
 	await _physics(2)
-	_check(Tasks.current() == &"find_it" and Events.goal.done == 1 and Events.goal.needed == 5,
-		"the active task and its rounds survive a save/load round trip")
+	_check(Tasks.current() == &"find_it" and Events.goal.done == 0 and Events.goal.needed == 5,
+		"the active task survives a save/load round trip, with rounds restarted")
 	_check(Tasks.times_done(&"find_it") == 1 and Tasks.times_done(&"welcome") == 1, "times done survive it too")
 	_check(_last_place() == &"picnic" and picnic.is_wanted(), "after loading, the goal and the station's request come back")
-	_check(Inventory.count(STONE) == 6, "stones survive it")
+	_check(Inventory.count(STONE) == 8, "stones survive it")
 
 	_place_head(picnic.place.global_position)
 	await _next_round(trial)
-	_check(trial.condition.round_index == 1 and trial.condition.probe,
-		"after loading, the run carries on at round 2, still one of the three baseline probes")
+	_check(trial.condition.round_index == 0 and trial.condition.probe,
+		"after loading, the run restarts with its first baseline probe")
 	await _pick(trial, trial.target())
-	for _i in 3:
+	for _i in 4:
 		await _next_round(trial)
 		await _pick(trial, trial.target())
 	_check(Tasks.current() == &"" and Tasks.times_done(&"find_it") == 2 and not picnic.is_wanted(),
 		"the fifth round ends the step there and then: one count, nothing to report late")
-	_check(Inventory.count(STONE) == 8, "the repeat pays again")
-	_check(Tasks.offers().has(&"find_it"), "next does not chain a second time, and the task stays on offer")
-
-	# A step that sends the child to where they already are.
-	var real := Tasks.save_state()
-	_place_head(picnic.place.global_position)
-	await _physics(3)
-	var forged := real.duplicate(true)
-	forged.current = "welcome"
-	forged.step = 2 # "Follow me to the picnic table!" waits for entered:picnic
-	Tasks.load_state(forged)
-	await _physics(3)
-	_check(Tasks.times_done(&"welcome") == 2 and Tasks.current() == &"",
-		"a step waiting for entered:<station> ends if the child is already sitting there")
-	Tasks.load_state(real)
+	_check(Inventory.count(STONE) == 10, "the repeat pays again")
+	_check(Tasks.offers().has(&"find_it"), "the practice list does not auto-advance, and the task stays on offer")
 
 	var visual_skill := VisualSkillDef.find(&"search")
 	var line := "%s! %s" % [visual_skill.display_name, visual_skill.description]
 	await _until(func() -> bool: return _said.has(line), 600)
-	_check(_said.count(line) == 2, "the station says what it trains once each time the task is run (%d)" % _said.count(line))
+	_check(_said.count(line) == 3, "the station introduces each run, including a restart after reload (%d)" % _said.count(line))
 	var welcome_done := _said.find(TaskDef.find(&"welcome").completed_text)
 	_check(welcome_done >= 0 and _said.find(TaskDef.find(&"find_it").steps[0].instruction) == welcome_done + 1
 		and _said.find(line) == welcome_done + 2 and _said[welcome_done + 3].begins_with("Find the"),
@@ -1090,6 +1088,20 @@ func _hands_and_placement() -> void:
 		node.free()
 	_check(bad.is_empty(), "trial objects: a script-free Visual that Contrast and Highlight both reach%s"
 		% ("" if bad.is_empty() else ": %s" % ", ".join(bad)))
+	# A grading component owns temporary materials, even if detached before its
+	# visual. Leaving must restore the authored material before releasing copies.
+	var butterfly := (load("res://content/creatures/butterfly.tscn") as PackedScene).instantiate()
+	level.add_child(butterfly)
+	var grading := butterfly.get_node(^"Contrast") as Contrast
+	var wing := butterfly.get_node(^"Visual/WingLeft") as MeshInstance3D
+	var authored := wing.get_surface_override_material(0)
+	grading.apply(0.5)
+	_check(wing.get_surface_override_material(0) != authored, "grading owns a separate material for each visual")
+	butterfly.remove_child(grading)
+	_check(wing.get_surface_override_material(0) == authored, "detaching grading restores authored materials before releasing its copies")
+	grading.free()
+	butterfly.queue_free()
+	await _physics_frames()
 	for kind in [&"mark_good", &"mark_bad", &"mark_reward", &"put_away_icon"]:
 		var visual := (load("res://content/effects/%s.tscn" % kind) as PackedScene).instantiate()
 		if _has_script(visual):
@@ -1169,7 +1181,7 @@ func _audio() -> void:
 	_check(Audio.speech[Audio.speech.size() - 1] == "say: Follow me to the picnic table!",
 		"reading a button aloud never talks over the guide")
 	before = Audio.cued
-	Events.play_at(Audio.tone(880.0, 60.0), Vector3.ZERO)
+	Events.play_at(Audio.tone(880.0, 0.1), Vector3.ZERO)
 	_check(Audio.cued > before, "Events.play_at still plays a stream the caller is holding")
 
 	# The claim the whole design rests on, checked rather than asserted in a
@@ -1395,6 +1407,7 @@ func _menu() -> void:
 	await _frames(3)
 	await _click_menu(left_tracker, &"menu_tab_bag")
 	_check(menu.page == &"bag", "the left controller can click the menu too")
+	await _task_menu(tracker, left_tracker)
 	left_controller.tracker = previous_left_tracker
 	XRServer.remove_tracker(left_tracker)
 
@@ -1545,6 +1558,87 @@ func _menu() -> void:
 			hand.position = parked[hand]
 	_check(not get_tree().paused, "the menu leaves the world running")
 	_finished += 1
+
+
+## Task-list interactions use tracked controller input and the real menu.
+func _task_menu(right: XRControllerTracker, left: XRControllerTracker) -> void:
+	var menu := Game.module(&"Menu")
+	var original := Tasks.save_state()
+	Tasks.load_state({times_done = {&"welcome": 1, &"find_it": 1, &"butterflies": 1, &"first_furniture": 1}})
+	menu.close()
+	_check(menu.readout_text().contains("Choose a task"), "idle wrist invites task selection")
+	menu.open()
+	menu.show_page(&"tasks")
+	await _frames(3)
+	_check(menu.page_text().contains("Vision practice") and menu.page_text().contains("2 / 2 completed")
+		and menu.find_button(&"menu_accept_practice_find_it") != null,
+		"practice starts expanded with completion counts and selectable tasks")
+	await _click_menu(right, &"menu_list_practice")
+	_check(menu.find_button(&"menu_accept_practice_find_it") == null
+		and menu.page_text().contains("Island adventure"), "collapsing a list hides its choices and reveals later lists")
+	await _click_menu(right, &"menu_list_tutorial")
+	_check(menu.page_text().contains("All done!"), "completed lists expand to show their finished state")
+	await _click_menu(right, &"menu_list_practice")
+	_check(menu.find_button(&"menu_next") != null and menu.find_button(&"menu_prev") == null,
+		"expanded lists expose forward paging at the first page")
+	await _click_menu(right, &"menu_next")
+	_check(menu.page_text().contains("Island adventure"), "More reaches later task-list rows")
+	await _click_menu(right, &"menu_prev")
+	_check(menu.find_button(&"menu_accept_practice_find_it") != null, "Back restores the earlier task choices")
+	# Opening with a held stick must not page until neutral, and a held flick
+	# must not repeat. Both controllers use the same OpenXR primary action.
+	menu.close()
+	right.set_input(&"primary", Vector2(0.0, -1.0))
+	menu.open()
+	menu.show_page(&"tasks")
+	_aim_menu(right, menu.find_button(&"menu_tab_tasks").global_position)
+	_aim_menu(left, menu.find_button(&"menu_tab_tasks").global_position)
+	await _frames(5)
+	_check(menu.find_button(&"menu_prev") == null, "opening with the thumbstick held waits for neutral")
+	menu.close()
+	right.set_input(&"primary", Vector2(1.0, 0.0))
+	menu.open()
+	menu.show_page(&"tasks")
+	await _frames(3)
+	right.set_input(&"primary", Vector2(0.0, -1.0))
+	await _frames(3)
+	_check(menu.find_button(&"menu_prev") == null, "turning a held sideways stick downward still waits for neutral")
+	right.set_input(&"primary", Vector2.ZERO)
+	await _frames(3)
+	right.set_input(&"primary", Vector2(0.0, -1.0))
+	await _frames(5)
+	_check(menu.find_button(&"menu_prev") != null and menu.page_text().contains("Island adventure"),
+		"right thumbstick pages forward through task lists")
+	var held_text: String = menu.page_text()
+	await _frames(15)
+	_check(menu.page_text() == held_text, "holding a thumbstick does not repeatedly page")
+	right.set_input(&"primary", Vector2.ZERO)
+	await _frames(3)
+	left.set_input(&"primary", Vector2(0.0, 1.0))
+	await _frames(5)
+	_check(menu.find_button(&"menu_prev") == null and menu.find_button(&"menu_accept_practice_find_it") != null,
+		"left thumbstick pages back to task choices")
+	left.set_input(&"primary", Vector2.ZERO)
+	await _frames(3)
+	await _click_menu(right, &"menu_accept_practice_find_it")
+	_check(not menu.is_open and Tasks.current() == &"find_it" and Tasks.save_state().list == "practice",
+		"accepting through a list starts the task with that list's policy and closes the menu")
+	menu.open()
+	menu.show_page(&"tasks")
+	_check(menu.page_text().contains("Finish this task") and menu.find_button(&"menu_list_practice") == null,
+		"an active task shows its objective instead of task-switching controls")
+	menu.close()
+	Events.profile_closing.emit()
+	Tasks.load_state({times_done = {&"welcome": 1, &"find_it": 1, &"butterflies": 1, &"first_furniture": 1}})
+	menu.open()
+	menu.show_page(&"tasks")
+	await _click_menu(right, &"menu_list_practice")
+	_check(menu.find_button(&"menu_next") == null and menu.find_button(&"menu_list_tutorial") != null,
+		"profile closing clears list expansion: completed tutorial starts collapsed again")
+	menu.close()
+	Tasks.load_state(original)
+	Save.write()
+	menu.open()
 
 
 ## Synthetic tracker input takes the same pose/trigger path as a controller.

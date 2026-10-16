@@ -8,7 +8,7 @@ extends Node
 ## A run opens with [member TrialDef.probe_rounds] unscored baseline rounds at a
 ## fixed difficulty and with help off: without that baseline there is nothing to
 ## compare later performance against. Round [i]n[/i] is a probe when [i]n[/i] is
-## below that number, so a run carried on after a reload is no different.
+## below that number. The caller decides whether to continue or restart a run.
 ##
 ## It knows nothing about tasks or stations.
 

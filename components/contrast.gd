@@ -40,6 +40,12 @@ func _ready() -> void:
 		apply(contrast)
 
 
+func _exit_tree() -> void:
+	# Release our overrides while the meshes and their original materials are
+	# still alive, rather than leaving renderer updates pointing at freed RIDs.
+	reset()
+
+
 ## Grades the object to [param weber] contrast against [member background_luminance].
 func apply(weber: float) -> void:
 	contrast = clampf(weber, 0.0, 1.0)
@@ -69,7 +75,7 @@ func applied_luminance() -> float:
 ## Puts the object's authored materials back.
 func reset() -> void:
 	for i in _meshes.size():
-		if i < _originals.size():
+		if i < _originals.size() and is_instance_valid(_meshes[i]):
 			_meshes[i].set_surface_override_material(0, _originals[i])
 	_graded.clear()
 	_originals.clear()

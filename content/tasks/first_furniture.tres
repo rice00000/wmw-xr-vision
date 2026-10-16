@@ -3,26 +3,21 @@
 [ext_resource type="Script" path="res://modules/tasks/task_def.gd" id="1_task"]
 [ext_resource type="Script" path="res://modules/tasks/task_step.gd" id="2_step"]
 
-[sub_resource type="Resource" id="Step_buy"]
+[sub_resource type="Resource" id="Step_menu"]
 script = ExtResource("2_step")
-event = "bought:*"
-instruction = "Open your wrist menu. Buy something in the shop."
-
-[sub_resource type="Resource" id="Step_take"]
-script = ExtResource("2_step")
-event = "taken_out:*"
-instruction = "Now take it out of your bag."
+event = "opened:menu"
+instruction = "Open your wrist menu.\nYou can buy furniture in the shop or use a piece you already own."
 
 [sub_resource type="Resource" id="Step_place"]
 script = ExtResource("2_step")
 event = "placed:*"
 place = &"home"
-instruction = "Put it in your house. Let go where you want it."
+instruction = "Place a piece of furniture at home.\nTake one from your bag, or move one you already put out. Let go where you want it."
 
 [resource]
 script = ExtResource("1_task")
 title = "Make your house yours"
-steps = Array[ExtResource("2_step")]([SubResource("Step_buy"), SubResource("Step_take"), SubResource("Step_place")])
+steps = Array[ExtResource("2_step")]([SubResource("Step_menu"), SubResource("Step_place")])
 rewards = Dictionary[StringName, int]({&"magic_stone": 1})
 completed_text = "Your house looks lovely! You can pick a new task from your wrist menu any time."
 requires = Array[StringName]([&"butterflies"])

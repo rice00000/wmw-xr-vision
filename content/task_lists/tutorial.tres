@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="TaskListDef" format=3]
+
+[ext_resource type="Script" path="res://modules/tasks/task_list_def.gd" id="1_list"]
+
+[resource]
+script = ExtResource("1_list")
+title = "Island adventure"
+tasks = Array[StringName]([&"welcome", &"find_it", &"butterflies", &"first_furniture"])
+auto_next = true
+requires = Array[StringName]([])
+start_on = "entered:island"

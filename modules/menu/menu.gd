@@ -18,7 +18,8 @@ extends Node
 ## [b]Pages[/b], as tabs down the left: Home, Tasks, Shop, Bag, Settings. Every
 ## button has a shape and a word, lights up when pointed at, reads its
 ## label aloud after a moment, clicks (the sound table's "pressed" row), and
-## buzzes the hand that pressed it. Long lists page three rows at a time.
+## buzzes the hand that pressed it. Long lists page three rows at a time, with
+## Back/More or a thumbstick flick. Task lists expand and collapse in this page.
 ##
 ## [b]Every other module is optional.[/b] With Tasks, Inventory or Save switched
 ## off, the page that needs it says so. The menu adds itself to [member
@@ -93,6 +94,8 @@ var _pointers: Array[UIPointer] = []
 var _ui_open := false
 var _status := ""
 var _first_row := 0
+var _scroll_armed := false
+var _expanded_lists: Dictionary[StringName, bool] = {}
 var _confirm_start_over := false
 var _dirty := false
 var _carried: Dictionary[StringName, Dictionary] = {}
@@ -104,7 +107,9 @@ func _ready() -> void:
 	Events.reported.connect(_on_reported)
 	Events.menu_toggled.connect(_on_ui_toggled)
 	Events.goal_changed.connect(_on_goal_changed)
-	Events.profile_closing.connect(close)
+	Events.profile_closing.connect(func() -> void:
+		close()
+		_expanded_lists.clear())
 	var inventory := _mod(&"Inventory")
 	if inventory:
 		inventory.changed.connect(_on_items_changed)
@@ -123,6 +128,7 @@ func _process(delta: float) -> void:
 	_sense_buttons(delta)
 	if not is_open:
 		return
+	_scroll()
 	if _dirty and is_open:
 		_dirty = false
 		_show()
@@ -139,6 +145,7 @@ func open() -> void:
 		return
 	get_tree().call_group(&"xr_ui", &"close")
 	is_open = true
+	_scroll_armed = false
 	page = &"home"
 	_first_row = 0
 	_status = ""
@@ -349,7 +356,7 @@ func _refresh_readout() -> void:
 	if _goal_label == null or not is_instance_valid(_goal_label):
 		return
 	_goal_label.visible = _mod(&"Tasks") != null
-	_goal_label.text = _goal() if not _goal().is_empty() else "Touch the star to choose a task"
+	_goal_label.text = _goal() if not _goal().is_empty() else "Choose a task"
 	var inventory := _mod(&"Inventory")
 	_stones_label.visible = inventory != null
 	_stones_icon.visible = inventory != null
@@ -515,7 +522,7 @@ func _home_rows() -> Array:
 	var rows := []
 	var tasks := _mod(&"Tasks")
 	if tasks:
-		var goal := _goal() if not _goal().is_empty() else "Nothing to do right now. Pick one on the Tasks page!"
+		var goal := _goal() if not _goal().is_empty() else "Choose a task on the Tasks page."
 		rows.append({text = "Now: %s" % goal})
 	else:
 		rows.append({text = "Tasks are switched off."})
@@ -544,28 +551,34 @@ func _task_rows() -> Array:
 		var rows := [{text = "%s\n%s" % [info.title, _trains(info)]}]
 		if not _goal().is_empty():
 			rows.append({text = "Now: %s" % _goal()})
-		var give_up := []
-		if tasks.has_method(&"abandon") and info.get("can_abandon", true):
-			give_up.append({id = &"menu_give_up", label = "Give up", icon = &"give_up",
-				style = RayButton.Style.CAUTION, say = "Give up %s" % info.title,
-				action = _give_up.bind(current)})
-		rows.append({text = "Reward: %s" % _rewards(info), icon = &"stone", buttons = give_up})
+		rows.append({text = "Reward: %s" % _rewards(info), icon = &"stone"})
 		return rows
-	var offers: Array = tasks.offers() if tasks.has_method(&"offers") else []
-	if offers.is_empty():
-		return [{text = "No new tasks right now. Look around the island!"}]
 	var rows := []
-	for task_id: StringName in offers:
-		var info := _describe(tasks, task_id)
+	for list: Dictionary in tasks.lists():
+		var expanded: bool = _expanded_lists.get(list.id, not list.offers.is_empty())
 		rows.append({
-			text = "%s\n%s  -  %s" % [info.title, _trains(info), _rewards(info)],
-			buttons = [{
-				id = StringName("menu_accept_%s" % task_id), label = "Accept", icon = &"accept",
-				say = "Accept %s. %s. It gives %s." % [info.title, _trains(info), _rewards(info)],
-				action = _accept.bind(task_id),
-			}],
+			text = "%s\n%d / %d completed" % [list.title, list.done, list.total],
+			buttons = [{id = StringName("menu_list_%s" % list.id),
+				label = "Hide" if expanded else "Show", icon = &"minus" if expanded else &"plus",
+				style = RayButton.Style.NAV,
+				say = "%s %s" % ["Hide" if expanded else "Show", list.title],
+				action = _toggle_list.bind(list.id, not expanded)}],
 		})
-	return rows
+		if not expanded:
+			continue
+		if list.offers.is_empty():
+			rows.append({text = "All done!" if list.done == list.total else "Complete earlier tasks to unlock more."})
+		for task_id: StringName in list.offers:
+			var info := _describe(tasks, task_id)
+			rows.append({
+				text = "%s\n%s  -  %s" % [info.title, _trains(info), _rewards(info)],
+				buttons = [{
+					id = StringName("menu_accept_%s_%s" % [list.id, task_id]), label = "Accept", icon = &"accept",
+					say = "Accept %s. %s. It gives %s." % [info.title, _trains(info), _rewards(info)],
+					action = _accept.bind(task_id, list.id),
+				}],
+			})
+	return rows if not rows.is_empty() else [{text = "No tasks available yet. Look around the island!"}]
 
 
 func _shop_rows() -> Array:
@@ -688,7 +701,9 @@ func _page_status() -> String:
 		&"tasks":
 			var tasks := _mod(&"Tasks")
 			if tasks and _current_task(tasks).is_empty():
-				return "Pick one. You can do one task at a time."
+				return "Choose a task. One at a time."
+			if tasks:
+				return "Finish this task before choosing another."
 	return ""
 
 
@@ -728,11 +743,11 @@ func _where() -> void:
 		tasks.remind()
 
 
-func _accept(task_id: StringName) -> void:
+func _accept(task_id: StringName, list_id: StringName) -> void:
 	var tasks := _mod(&"Tasks")
 	if tasks == null or not tasks.has_method(&"accept"):
 		return
-	if tasks.accept(task_id): # reports accepted:<id> itself, which is heard
+	if tasks.accept(task_id, list_id): # reports accepted:<id> itself, which is heard
 		close()
 		return
 	Events.judge(&"bad", _panel.global_position)
@@ -740,16 +755,8 @@ func _accept(task_id: StringName) -> void:
 	_dirty = true
 
 
-func _give_up(task_id: StringName) -> void:
-	var tasks := _mod(&"Tasks")
-	if tasks == null:
-		return
-	var title: String = _describe(tasks, task_id).title
-	tasks.abandon()
-	if _current_task(tasks) == task_id:
-		_say_status("%s can't be given up. Keep going!" % title)
-	else:
-		_say_status("You stopped %s. Pick another one any time." % title)
+func _toggle_list(list_id: StringName, expanded: bool) -> void:
+	_expanded_lists[list_id] = expanded
 	_dirty = true
 
 
@@ -823,9 +830,30 @@ func _say_status(text: String) -> void:
 		Events.read_aloud.emit(text)
 
 
+## One page per stick flick; opening with the stick held waits for neutral.
+func _scroll() -> void:
+	var vertical := 0.0
+	var neutral := true
+	for pointer in _pointers:
+		if not pointer.visible:
+			continue
+		var stick := pointer.controller.get_vector2(&"primary")
+		neutral = neutral and stick.length() < 0.3
+		if absf(stick.y) > absf(stick.x) and absf(stick.y) > absf(vertical):
+			vertical = stick.y
+	if neutral:
+		_scroll_armed = true
+	elif absf(vertical) > 0.7 and _scroll_armed:
+		_scroll_armed = false
+		_next(-1 if vertical > 0.0 else 1)
+
+
 func _next(step: int) -> void:
-	_first_row = maxi(_first_row + step * ROWS, 0)
-	_dirty = true
+	var last := maxi(_rows().size() - 1, 0) / ROWS * ROWS
+	var first := clampi(_first_row + step * ROWS, 0, last)
+	if first != _first_row:
+		_first_row = first
+		_dirty = true
 
 
 # -- laying out -------------------------------------------------------------------
@@ -912,12 +940,7 @@ func _mod(module_name: StringName) -> Node:
 
 
 func _current_task(tasks: Node) -> StringName:
-	if tasks.has_method(&"current"):
-		return tasks.current()
-	if tasks.has_method(&"active"): # before the one-task Tasks API lands
-		var active: Array = tasks.active()
-		return active[0] if not active.is_empty() else &""
-	return &""
+	return tasks.current()
 
 
 func _describe(tasks: Node, task_id: StringName) -> Dictionary:

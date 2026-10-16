@@ -34,6 +34,10 @@ func _run() -> void:
 				_check(not BakedSpeech.paths_for(step.instruction).is_empty(), "Task instruction: %s" % task.id)
 		if not task.completed_text.is_empty():
 			_check(not BakedSpeech.paths_for(task.completed_text).is_empty(), "Task completion: %s" % task.id)
+	for list in TaskListDef.all():
+		for action in ["Show", "Hide"]:
+			var text := "%s %s" % [action, list.title]
+			_check(not BakedSpeech.paths_for(text).is_empty(), "Task-list read-aloud: %s" % text)
 	var menu := get_node("/root/Menu")
 	for page in menu.PAGES:
 		menu.page = page

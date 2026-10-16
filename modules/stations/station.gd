@@ -14,7 +14,7 @@ extends Node3D
 ## a short gap after the last round, the next one starts. Movement stays free,
 ## and the station says once per step what the practice is for. Leaving the zone
 ## pauses the round's clock and hints; returning carries on. When the goal stops
-## naming the trial (the last round is in, or the task was dropped) the station
+## naming the trial (the last round is in, or a profile is reloaded) the station
 ## goes idle, and a round still out is dropped unscored.
 ##
 ## Every station reports "entered:<place id>" when a head comes in, idle or not,
@@ -133,10 +133,10 @@ func _on_goal_changed(goal: Goal) -> void:
 	var wanted := _wanted_key()
 	if wanted != _wanted_step:
 		if not wanted.is_empty() and goal.done == 0:
-			_introduced = "" # a fresh run; loading a partly completed run keeps its introduction
+			_introduced = "" # a fresh run, including an unfinished task restarted after loading
 		_wanted_step = wanted
 		if wanted.is_empty():
-			runner.cancel() # the task moved on or was dropped: a round still out is nobody's
+			runner.cancel() # the goal moved on or was cleared: cancel any unfinished round
 		elif _inside:
 			_enter_zone()
 	_refresh()

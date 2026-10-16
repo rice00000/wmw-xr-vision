@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="TaskListDef" format=3]
+
+[ext_resource type="Script" path="res://modules/tasks/task_list_def.gd" id="1_list"]
+
+[resource]
+script = ExtResource("1_list")
+title = "Vision practice"
+tasks = Array[StringName]([&"find_it", &"butterflies"])
+auto_next = false
+requires = Array[StringName]([&"first_furniture"])
+start_on = ""

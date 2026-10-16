@@ -2,7 +2,16 @@
 
 ## Body constraints
 
-`python tools/test.py` runs framework unit tests, game smoke tests, and the body suite.
+`python tools/test.py` checks speech freshness, imports Godot resources, and runs
+framework unit tests, task-list contracts, baked-speech playback, game smoke tests,
+and the body suite. Direct Godot stages fail on engine errors even if Godot exits
+successfully; each stage has a five-minute timeout. After changing authored text, run
+`python tools/bake_speech.py` first (dependencies: `tools/requirements.txt`).
+
+Task-list contracts cover prerequisites, shared completion, source-list policy,
+entry events, invalid/legacy selections, restart and immediate reward persistence.
+Smoke tests also use tracked controller input for list expansion, selection,
+button paging and thumbstick paging with neutral/release handling.
 `python tools/playtest/usability.py` runs the body suite alone; `--rendered` adds synthetic eye-view PNGs without a headset/runtime.
 `client.py demo` runs both the functional walkthrough and the body suite.
 

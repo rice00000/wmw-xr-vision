@@ -17,8 +17,8 @@ extends Node
 ## runs it sees that and runs rounds while the child sits there. This module
 ## counts the rounds itself, off [signal Events.trial_ended], and ends the step on
 ## the last one ("finished:<trial>" is reported then, for the sound and the log).
-## The count is saved with everything else, so a reload carries on with the right
-## round and the right number of baseline probes.
+## Steps and round counts are transient: an unfinished task restarts on reload.
+## Only the active task/list identity and task completion counts are saved.
 ##
 ## Tasks knows nothing about the map. A step names a [Place] id; the guide and
 ## the wrist menu turn that into somewhere to walk to.
@@ -28,13 +28,15 @@ extends Node
 ## touches a station: everything goes over [Events].
 ##
 ## [b]For the wrist menu[/b] (through [code]Game.module(&"Tasks")[/code]):
-## [method current], [method offers], [method accept], [method abandon],
+## [method current], [method lists], [method offers], [method accept],
 ## [method describe], [method remind]. The goal itself is [member Events.goal].
 ##
-## Task data: res://content/tasks/*.tres. Rewards go out as
-## [signal Events.reward_granted], so this works with or without an Inventory.
+## Task data: res://content/tasks/*.tres; lists: res://content/task_lists/*.tres.
+## Rewards go through Events.reward_granted; saving through Events.save_requested.
+## Both modules are optional. See docs/tasks.md.
 
-var _defs: Array[TaskDef] = []
+var _lists: Array[TaskListDef] = []
+var _list: StringName = &""
 var _current: StringName = &""
 var _step := 0
 ## Facts counted so far on a fact step; rounds finished so far on a trial step.
@@ -43,7 +45,7 @@ var _times_done: Dictionary[StringName, int] = {}
 
 
 func _ready() -> void:
-	_defs = TaskDef.all()
+	_lists = TaskListDef.all()
 	Events.reported.connect(_on_reported)
 	Events.trial_ended.connect(_on_trial_ended)
 	Events.level_changed.connect(_on_level_changed)
@@ -56,46 +58,56 @@ func current() -> StringName:
 	return _current
 
 
-## Task ids the child can accept now, in file order. Empty while one is running.
-func offers() -> Array[StringName]:
+## Available lists, including completed ones, in file order. UI uses these
+## snapshots to group tasks; it never decides eligibility or progression.
+func lists() -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for list in _lists:
+		if not _requirements_met(list.requires):
+			continue
+		var done := 0
+		for task_id in list.tasks:
+			if is_done(task_id):
+				done += 1
+		result.append({id = list.id, title = list.title, done = done,
+			total = list.tasks.size(), offers = offers(list.id)})
+	return result
+
+
+## Acceptable task ids, optionally within a list. Nothing while one is active.
+func offers(list_id: StringName = &"") -> Array[StringName]:
 	var ids: Array[StringName] = []
 	if not _current.is_empty():
 		return ids
-	for task in _defs:
-		if not task.offered or (times_done(task.id) > 0 and not task.repeatable):
+	for list in _lists:
+		if not list_id.is_empty() and list.id != list_id:
 			continue
-		var met := true
-		for needed in task.requires:
-			met = met and times_done(needed) > 0
-		if met:
-			ids.append(task.id)
+		if not _requirements_met(list.requires):
+			continue
+		if list.auto_next:
+			var next := _next_task(list)
+			if not next.is_empty() and not ids.has(next):
+				ids.append(next)
+			continue
+		for task_id in list.tasks:
+			if _available(task_id) and not ids.has(task_id):
+				ids.append(task_id)
 	return ids
 
 
-## Starts [param task_id] if it is on offer. Reports "accepted:<id>".
-func accept(task_id: StringName) -> bool:
-	if not offers().has(task_id):
-		return false
-	Events.report(&"accepted", task_id)
-	return start(task_id)
-
-
-## Drops the current task, progress and all. Refused for a task that is not
-## [member TaskDef.abandonable] (the welcome). Returns whether it was dropped.
-func abandon() -> bool:
-	var task := TaskDef.find(_current)
-	if task == null or not task.abandonable:
-		return false
-	_current = &""
-	_step = 0
-	_progress = 0
-	Narrator.drop(&"task")
-	_publish()
-	return true
+## The list identifies the progression policy when a task belongs to several.
+## Omitting it chooses the first list offering this task, in file order.
+func accept(task_id: StringName, list_id: StringName = &"") -> bool:
+	for list in _lists:
+		if (list_id.is_empty() or list.id == list_id) and offers(list.id).has(task_id):
+			_activate(task_id, list)
+			Events.report(&"accepted", task_id)
+			return true
+	return false
 
 
 ## Everything the menu shows about a task:
-## [code]{title, visual_skills, rewards, place, repeatable, times_done, can_abandon}[/code], where
+## [code]{title, visual_skills, rewards, place, repeatable, times_done}[/code], where
 ## visual_skills are display names ([method VisualSkillDef.label]). Empty for an unknown id.
 func describe(task_id: StringName) -> Dictionary:
 	var task := TaskDef.find(task_id)
@@ -113,7 +125,6 @@ func describe(task_id: StringName) -> Dictionary:
 		rewards = rewards,
 		place = task.place(),
 		repeatable = task.repeatable,
-		can_abandon = task.abandonable,
 		times_done = times_done(task_id),
 	}
 
@@ -142,22 +153,43 @@ func is_done(task_id: StringName) -> bool:
 	return times_done(task_id) > 0
 
 
-## Starts a task whether or not it is on offer: a chain or [member TaskDef.start_on].
-## Refused while another task is running, or for a task already
-## done that is not repeatable.
-func start(task_id: StringName) -> bool:
-	if not _current.is_empty():
-		return false
-	var task := TaskDef.find(task_id)
-	if task == null:
-		push_warning("[Tasks] Unknown task: %s" % task_id)
-		return false
-	if times_done(task_id) > 0 and not task.repeatable:
-		return false
-	_current = task_id
-	Events.task_started.emit(task_id)
-	_enter_step(task, 0)
+func _requirements_met(required: Array[StringName]) -> bool:
+	for task_id in required:
+		if not is_done(task_id):
+			return false
 	return true
+
+
+func _available(task_id: StringName) -> bool:
+	var task := TaskDef.find(task_id)
+	return task != null and not task.steps.is_empty() and _requirements_met(task.requires) \
+		and (task.repeatable or not is_done(task_id))
+
+
+func _find_list(list_id: StringName) -> TaskListDef:
+	for list in _lists:
+		if list.id == list_id:
+			return list
+	return null
+
+
+## Automatic entry and progression always choose the first unfinished task.
+## A completed repeatable task can still be selected from a free-choice list.
+func _next_task(list: TaskListDef) -> StringName:
+	if list == null or not _requirements_met(list.requires):
+		return &""
+	for task_id in list.tasks:
+		if not is_done(task_id):
+			return task_id if _available(task_id) else &""
+	return &""
+
+
+func _activate(task_id: StringName, list: TaskListDef) -> void:
+	_current = task_id
+	_list = list.id
+	Events.task_started.emit(task_id)
+	_enter_step(TaskDef.find(task_id), 0)
+	Events.save_requested.emit()
 
 
 ## A new level (or another player's game) is up: say where things stand.
@@ -209,9 +241,13 @@ func _on_reported(what: StringName, id: StringName, _data: Dictionary) -> void:
 			else:
 				_publish()
 		return
-	for task in _defs:
-		if not task.start_on.is_empty() and TaskStep.key_matches(task.start_on, what, id):
-			if start(task.id):
+	if not _current.is_empty():
+		return
+	for list in _lists:
+		if not list.start_on.is_empty() and TaskStep.key_matches(list.start_on, what, id):
+			var task_id := _next_task(list)
+			if not task_id.is_empty():
+				_activate(task_id, list)
 				return
 
 
@@ -227,20 +263,28 @@ func _enter_step(task: TaskDef, index: int) -> void:
 
 
 func _complete(task: TaskDef) -> void:
-	var first := times_done(task.id) == 0
+	var list := _find_list(_list)
 	_times_done[task.id] = times_done(task.id) + 1
-	_current = &""
-	_step = 0
 	Narrator.drop(&"task")
+	# Keep the active identity until rewards are applied: reward listeners cannot
+	# accept another task halfway through settlement.
 	for item_id in task.rewards:
 		Events.reward_granted.emit(item_id, task.rewards[item_id])
+	_current = &""
+	_list = &""
+	_step = 0
+	_progress = 0
+	# Completion and inventory are captured together, before announcing success.
+	Events.save_requested.emit()
 	if not task.rewards.is_empty():
 		Events.judge(&"reward", _where_the_child_is())
 	Events.task_completed.emit(task.id)
-	Narrator.say(task.completed_text) # on no topic, so the next task's first line queues behind it
-	if first and not task.next.is_empty() and start(task.next):
-		return
-	_publish() # nothing to do: the menu offers what is next
+	Narrator.say(task.completed_text)
+	var next := _next_task(list) if list and list.auto_next else &""
+	if _current.is_empty() and not next.is_empty():
+		_activate(next, list)
+	else:
+		_publish()
 
 
 func _where_the_child_is() -> Vector3:
@@ -252,19 +296,24 @@ func _where_the_child_is() -> Vector3:
 
 
 func save_state() -> Dictionary:
-	return {
-		current = String(_current),
-		step = _step,
-		progress = _progress,
-		times_done = _times_done.duplicate(),
-	}
+	return {current = String(_current), list = String(_list), times_done = _times_done.duplicate()}
 
 
 func load_state(data: Dictionary) -> void:
-	_current = StringName(data.get("current", ""))
-	_step = data.get("step", 0)
-	_progress = data.get("progress", 0)
+	Narrator.drop(&"task")
+	_current = &""
+	_list = &""
+	_step = 0
+	_progress = 0
+	_publish() # cancel any live round before restoring a task from its beginning
 	_times_done.assign(data.get("times_done", {}))
-	if not _current.is_empty() and current_step() == null: # the task file changed under the save
-		_current = &""
+	var task_id := StringName(data.get("current", ""))
+	var list_id := StringName(data.get("list", ""))
+	# Older saves have no source list. Resolve it using today's availability;
+	# their step/progress fields are deliberately ignored. No rewards are replayed.
+	for list in _lists:
+		if (list_id.is_empty() or list.id == list_id) and offers(list.id).has(task_id):
+			_current = task_id
+			_list = list.id
+			break
 	_publish()

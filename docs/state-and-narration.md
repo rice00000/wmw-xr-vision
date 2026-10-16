@@ -26,7 +26,9 @@ Saving only happened on task completion and focus loss, so mid-task progress
 could roll back. Start over patched nodes in place and left queued lines, timers,
 facilitator pins, the vision ability and the open research log behind.
 
-## What was done
+## Current design
+
+*Task persistence updated 16 Oct 2026; see [tasks and task lists](tasks.md).*
 
 **One owner for each thing; everyone else reads it and keeps no copy.**
 
@@ -38,7 +40,8 @@ facilitator pins, the vision ability and the open research log behind.
   `trial_requested` and its withdraw / re-send dance are gone.
 - **Rounds:** `Tasks` counts them off `trial_ended` and ends the step on the last
   one. `TrialRunner` keeps no count: it runs "round *n*", and *n* comes from the
-  goal. So probes and the round number survive a reload. The station starts the
+  goal. These counts are transient: reload restarts an unfinished task from its
+  first step, and trials from their first baseline probe. The station starts the
   next round when the child is in its zone, no round is out, the gap is over and
   the Narrator is quiet. Stations never restrict movement.
 - **Narration** (`core/narrator.gd`, autoload `Narrator`): every line goes
@@ -62,9 +65,14 @@ facilitator pins, the vision ability and the open research log behind.
     marks the reset.
   - The team picks or creates a named save on the Facilitator panel's Saves tab:
     Start fresh, or Copy this save as a checkpoint (research log not copied).
-- **Saving** needs no asking: `Save` writes after every fact and every round, at
-  most once a frame, via a temporary file. A save from another format version
-  loads as a fresh start, never half of one.
+- **Saving:** ordinary facts and rounds schedule a write at the end of the
+  frame. Task activation and completion request an immediate write; completion
+  counts and rewards are captured together. Tasks saves its active task/list
+  identity and completion counts, never step or round progress. Other systems
+  keep their own persistent state. A temporary file replaces the previous save;
+  a failed write/rename leaves the previous file intact. A different format
+  version starts fresh. Existing version-1 task progress is read using the
+  migration rules in [tasks.md](tasks.md).
 
 ## Rules from here
 

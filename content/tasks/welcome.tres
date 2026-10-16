@@ -23,10 +23,6 @@ instruction = "Follow me to the picnic table!"
 [resource]
 script = ExtResource("1_task")
 title = "Welcome to the island"
-start_on = "entered:island"
 steps = Array[ExtResource("2_step")]([SubResource("Step_ball"), SubResource("Step_menu"), SubResource("Step_follow")])
 rewards = Dictionary[StringName, int]({&"magic_stone": 1})
 completed_text = "You made it! Here is your first Magic Stone."
-next = &"find_it"
-offered = false
-abandonable = false

@@ -34,8 +34,8 @@ signal task_completed(task_id: StringName)
 signal level_changing(path: String)
 signal level_changed(level: Node)
 
-## Ask the Save module to write to disk now. It also writes by itself after
-## every fact and every round, so only a moment with neither needs this.
+## Write synchronously after a complete state change (e.g. task rewards).
+## Ordinary facts and rounds also schedule a write at the end of the frame.
 signal save_requested
 
 ## Someone else is about to play, or this player starts over (Profile): write

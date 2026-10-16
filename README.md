@@ -4,14 +4,14 @@ A VR magic adventure for children who gained sight late (Project Prakash, ages 8
 
 Godot **4.7.2**, GDScript, Mobile renderer, OpenXR, Meta Quest.
 
-**Playable loop:** welcome → Find items in clutter at the picnic table → catch butterflies in the meadow → buy and place furniture → free play. Training tasks can be repeated from the wrist menu or facilitator panel.
+**Playable loop:** welcome → Find items in clutter at the picnic table → catch butterflies in the meadow → buy and place furniture → free play. The tutorial advances automatically; after it, players choose repeatable training from the wrist menu. See [tasks and task lists](docs/tasks.md).
 
 ## Run it
 
 - **PC / Mac:** install [Meta XR Simulator](https://developers.meta.com/horizon/documentation/native/xrsim-getting-started/), enable its OpenXR runtime, then run the project in Godot. The simulator uses the same XR controls as the headset.
 - **Quest:** install Godot OpenXR Vendors **5.1.0** and the Android build template. Connect and authorize the headset, then run the **Meta Quest 3** export preset.
 
-**Controls:** grip grabs; touch catches creatures and presses world buttons. Left stick walks, including during tasks; right stick turns (forward teleports). B / Y asks for help. Touch the left wrist star or release Menu (simulator M) to open the menu; point and pull the trigger to select. Close through Home → Close or Menu. Menu + Y toggles the Facilitator panel (difficulty, save slots). The world pauses while menus are open. View height (Lower / Higher) is on the menu's Settings page.
+**Controls:** grip grabs; touch catches creatures and presses world buttons. Left stick walks, including during tasks; right stick turns (forward teleports). B / Y asks for help. Touch the left wrist star or release Menu (simulator M) to open the menu; point and pull the trigger to select. Close through Home → Close or Menu. Menu + Y toggles the Facilitator panel (difficulty, save slots). The world pauses while menus are open. Task lists expand/collapse with Show/Hide; use Back/More or flick either thumbstick vertically to page through menus. View height (Lower / Higher) is on the menu's Settings page.
 
 ## Where things are
 
@@ -38,11 +38,11 @@ tools/       testing, capture and Quest deployment
 Dependencies: `core` ← `player` / `components` ← `modules` ← `content` / `levels`. Code may also load content by path (a data folder, a table, a visual). `core` knows one scene by path: the player rig.
 Modules communicate through `Events`; `Game.module()` looks up optional modules. The only direct links: `stations` and `tasks` use `trials` types, and the catch trial drives `creatures`' `Wander`. `facilitator` may use anything.
 
-Tasks owns the current goal (`Events.goal`). Trials measure each round; stations host them. Training adjusts difficulty and logs results. Narrator keeps voice and subtitles together. Each save’s progress, settings and logs live in `user://profiles/<id>/`.
+Tasks coordinates task lists, activation, rewards and the current goal (`Events.goal`). Trials measure each round; stations host them. Training adjusts difficulty and logs results. Narrator keeps voice and subtitles together. Each save’s progress, settings and logs live in `user://profiles/<id>/`.
 
 ## How to add things
 
-- **Task:** a `TaskDef` in `content/tasks/`, with fact or trial steps and rewards.
+- **Task:** a `TaskDef` in `content/tasks/`, with fact or trial steps and rewards; add its ID to a `TaskListDef` in `content/task_lists/`. See [authoring and restart rules](docs/tasks.md).
 - **Trial:** a `TrialDef`, a `Trial` subclass and a station scene.
 - **Furniture:** an `ItemDef` and a `Grabbable` scene with a `Placeable` child.
 - **Visuals:** script-free scenes under `content/`, instanced as `Visual` children.

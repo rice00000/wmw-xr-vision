@@ -4,44 +4,31 @@ extends Resource
 ##
 ## This is the game's driver. Everything the child does is a task — the welcome,
 ## the measured "find the cup" rounds at the picnic table, catching butterflies,
-## furnishing the house — so there is one place to look for "what happens next"
-## and one way to add it. Lives at res://content/tasks/<id>.tres; the file name IS
-## the task id.
+## furnishing the house. TaskListDef owns selection and automatic progression.
+## Lives at res://content/tasks/<id>.tres; the file name is the task id.
 ##
 ## A task is a list of [TaskStep]s. A step either waits for a fact on the bus or
 ## runs rounds of a measured [Trial] (see [TrialDef]). That is the only
 ## distinction, and it is a data field, not a second system.
 ##
 ## The child does one task at a time ([method Tasks.current]). Which ones they may
-## pick next from the wrist menu ([method Tasks.offers]) is said here too:
-## [member offered], [member requires], [member repeatable].
+## pick next depends on its list, [member requires] and [member repeatable].
+## See docs/tasks.md for the content authoring contract.
 
 const DIR := "res://content/tasks/"
 
 @export var title := ""
-## Starts by itself when this fact is reported and no task is running, e.g.
-## "entered:island". Only once, unless [member repeatable]. Empty = only by being
-## accepted from the menu or chained from another task's [member next].
-@export var start_on := ""
 @export var steps: Array[TaskStep] = []
 ## Paid when the task is done, every time. Magic Stones are the only currency, so
 ## in practice this is [code]{&"magic_stone": n}[/code].
 @export var rewards: Dictionary[StringName, int] = {}
 @export_multiline var completed_text := ""
-## Task started automatically the [i]first[/i] time this one is completed. Doing a
-## repeatable task again does not walk the chain again.
-@export var next: StringName = &""
 
-@export_group("Offer")
-## Listed in [method Tasks.offers] once [member requires] are met. Off for tasks
-## that only ever start by themselves (the welcome) or are internal (self-test).
-@export var offered := true
+@export_group("Availability")
 ## Tasks that must each have been completed at least once before this is offered.
 @export var requires: Array[StringName] = []
 ## Can be done again once done, for more stones and more practice.
 @export var repeatable := false
-## The child may drop it from the menu. Off for the welcome, which teaches the menu.
-@export var abandonable := true
 
 var id: StringName:
 	get:

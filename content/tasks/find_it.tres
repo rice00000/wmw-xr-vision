@@ -16,6 +16,5 @@ title = "Find It"
 steps = Array[ExtResource("2_step")]([SubResource("Step_rounds")])
 rewards = Dictionary[StringName, int]({&"magic_stone": 2})
 completed_text = "Five found! Two Magic Stones for you."
-next = &"butterflies"
 requires = Array[StringName]([&"welcome"])
 repeatable = true

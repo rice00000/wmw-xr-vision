@@ -1,5 +1,7 @@
 ## Learn to See VR game
 
+> Implementation reference: [Tasks and task lists](tasks.md) describes the current task architecture, progression and persistence. The prototype architecture below records the original proposal.
+
 Wanchen, Wei, Megan
 
 ## 1\. PROJECT OVERVIEW

@@ -25,10 +25,10 @@ radius = 0.035
 height = 0.07
 
 [sub_resource type="SphereMesh" id="SphereMesh_fingertip"]
-radius = 0.012
-height = 0.024
-radial_segments = 12
-rings = 6
+radius = 0.026
+height = 0.052
+radial_segments = 24
+rings = 12
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_hand"]
 albedo_color = Color(1, 0.8, 0.65, 1)
@@ -89,7 +89,7 @@ mesh = SubResource("SphereMesh_hand")
 surface_material_override/0 = SubResource("StandardMaterial3D_hand")
 
 [node name="Fingertip" type="MeshInstance3D" parent="LeftController/Hand"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.06)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.4, 0, 0, -0.036)
 cast_shadow = 0
 mesh = SubResource("SphereMesh_fingertip")
 surface_material_override/0 = SubResource("StandardMaterial3D_hand")
@@ -109,7 +109,7 @@ mesh = SubResource("SphereMesh_hand")
 surface_material_override/0 = SubResource("StandardMaterial3D_hand")
 
 [node name="Fingertip" type="MeshInstance3D" parent="RightController/Hand"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, -0.06)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1.4, 0, 0, -0.036)
 cast_shadow = 0
 mesh = SubResource("SphereMesh_fingertip")
 surface_material_override/0 = SubResource("StandardMaterial3D_hand")

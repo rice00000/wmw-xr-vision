@@ -2,6 +2,8 @@ extends Node
 ## Standalone test entry point. No production scenes/scripts are patched.
 ## JSON lines over localhost: observations, tracked hands, physical pokes and inputs.
 
+const Observation := preload("res://tools/playtest/observation.gd")
+
 var _server := TCPServer.new()
 var _peer: StreamPeerTCP
 var _buffer := ""
@@ -14,6 +16,7 @@ var _eye_view := true
 var _out := ""
 var _log: FileAccess
 var _recent: Array = []
+var _fixture: Node3D
 
 
 func _ready() -> void:
@@ -24,12 +27,15 @@ func _ready() -> void:
 		get_tree().quit(2)
 		return
 	var port := 18765
+	var interaction_fixture := false
 	_out = ProjectSettings.globalize_path("res://build/playtest")
 	for arg in OS.get_cmdline_user_args():
 		if arg.begins_with("--port="):
 			port = int(arg.trim_prefix("--port="))
 		elif arg.begins_with("--out="):
 			_out = arg.trim_prefix("--out=")
+		elif arg == "--fixture=interaction":
+			interaction_fixture = true
 	seed(20261015)
 	# These synthetic controllers have no physical vibration motor. This setting
 	# is isolated by the playtest profile, just like the game's smoke test.
@@ -44,7 +50,11 @@ func _ready() -> void:
 		_event("instruction", {text = line.text}))
 	Events.trial_ended.connect(func(visual_skill: StringName, success: bool, data: Dictionary) -> void:
 		_event("trial", {visual_skill = visual_skill, success = success, data = _json(data)}))
-	add_child(load("res://main.tscn").instantiate())
+	if interaction_fixture:
+		_fixture = load("res://tools/playtest/interaction_fixture.gd").new()
+		add_child(_fixture)
+	else:
+		add_child(load("res://main.tscn").instantiate())
 	while not is_instance_valid(Game.level):
 		await get_tree().process_frame
 	_attach()
@@ -129,6 +139,34 @@ func _dispatch(request: Variant) -> void:
 
 func _execute(cmd: Dictionary) -> Dictionary:
 	match cmd.get("op", "state"):
+		"observe":
+			return {ok = true, observation = _observe(cmd.get("targets", []))}
+		"probe":
+			var hand := _controller(cmd.hand).get_node(^"Hand") as Hand
+			return {ok = true, probe = Observation.sweep(hand, cmd.points, cmd.radius, _resolve(cmd.get("contact", "")))}
+		"step":
+			var side: String = cmd.hand
+			var orientation := _controller(side).global_basis
+			if cmd.has("rotation"):
+				orientation = Basis.from_euler(_vector(cmd.rotation) * PI / 180.0)
+			var samples := await _move(side, Transform3D(orientation, _vector(cmd.position)),
+				float(cmd.seconds), true, cmd.get("targets", []))
+			return {ok = true, observation = _observe(cmd.get("targets", [])), samples = samples}
+		"head":
+			(Game.player.get_node(^"Camera") as Node3D).rotation_degrees = _vector(cmd.rotation)
+			await _wait(0.06)
+			return {ok = true, observation = _observe(cmd.get("targets", []))}
+		"fixture":
+			if _fixture == null:
+				return {ok = false, error = "Fixture setup is available only with --fixture=interaction"}
+			for side in ["left", "right"]:
+				_trackers[side].set_input(&"grip_click", false)
+			_fixture.configure(cmd)
+			for side in ["left", "right"]:
+				var at := Vector3(-0.26 if side == "left" else 0.26, cmd.eye_height - 0.35, -0.15)
+				_pose(side, Game.player.global_transform * Transform3D(Basis.IDENTITY, at))
+			await _wait(0.1)
+			return {ok = true, observation = _observe([])}
 		"state":
 			return {ok = true, state = _snapshot()}
 		"wait":
@@ -229,12 +267,21 @@ func _execute(cmd: Dictionary) -> Dictionary:
 	return {ok = true, state = _snapshot()}
 
 
+func _observe(keys: Array) -> Dictionary:
+	var targets := {}
+	for key: String in keys:
+		var node := _resolve(key)
+		targets[key] = Observation.target(node) if node else null
+	return {pose = Observation.pose(), targets = targets}
+
+
 func _controller(side: String) -> XRController3D:
 	return Game.player.get_node("%sController" % side.capitalize())
 
 
-func _move(side: String, end: Transform3D, seconds: float) -> void:
+func _move(side: String, end: Transform3D, seconds: float, record := false, targets: Array = []) -> Array:
 	seconds = clampf(seconds, 0.02, 30.0)
+	var samples: Array = []
 	var start := _controller(side).global_transform
 	var begin := Time.get_ticks_msec()
 	var elapsed := 0.0
@@ -242,9 +289,14 @@ func _move(side: String, end: Transform3D, seconds: float) -> void:
 		var at := start.interpolate_with(end, minf(elapsed / seconds, 1.0))
 		_pose(side, at)
 		await get_tree().process_frame
+		if record:
+			samples.append(_observe(targets))
 		elapsed = (Time.get_ticks_msec() - begin) / 1000.0
 	_pose(side, end)
 	await _wait(0.06) # allow collision overlaps to reach the existing Hand
+	if record:
+		samples.append(_observe(targets))
+	return samples
 
 
 func _pose(side: String, world: Transform3D) -> void:
@@ -332,7 +384,7 @@ func _snapshot() -> Dictionary:
 			entry["target"] = _describe(node.current())
 		trials.append(entry)
 	return {pid = OS.get_process_id(), task = Tasks.current(), goal = Events.goal.text, waiting_for = Events.goal.waiting_for,
-		menu_open = Menu.is_open, debug_open = Debug.is_open, menu_page = Menu.page, paused = get_tree().paused,
+		menu_open = Menu.is_open, facilitator_open = Facilitator.is_open, menu_page = Menu.page, paused = get_tree().paused,
 		inventory = Inventory.all(), hands = hands, places = places, objects = objects,
 		buttons = buttons, trials = trials, recent = _recent.duplicate(),
 		eye = _json(Game.player.get_node("Camera").global_position), profile = Profile.id}

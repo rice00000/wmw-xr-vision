@@ -26,9 +26,9 @@
 [ext_resource type="PackedScene" path="res://modules/guide/guide_character.tscn" id="32_guide"]
 [ext_resource type="PackedScene" path="res://modules/placement/decor_layout.tscn" id="33_layout"]
 [ext_resource type="PackedScene" path="res://modules/vision/vision_orb.tscn" id="34_orb"]
-[ext_resource type="Resource" path="res://content/vision/clear_sight.tres" id="35_clear"]
-[ext_resource type="Resource" path="res://content/vision/edge_glow.tres" id="36_glow"]
-[ext_resource type="Resource" path="res://content/vision/high_contrast.tres" id="37_contrast"]
+[ext_resource type="Resource" path="res://content/vision_profiles/clear_sight.tres" id="35_clear"]
+[ext_resource type="Resource" path="res://content/vision_profiles/edge_glow.tres" id="36_glow"]
+[ext_resource type="Resource" path="res://content/vision_profiles/high_contrast.tres" id="37_contrast"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_ykpvr"]
 sky_top_color = Color(0.2, 0.45, 0.88, 1)

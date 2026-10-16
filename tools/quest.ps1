@@ -23,10 +23,13 @@ $OutDir  = Join-Path $Project 'build'
 $ApkName = 'xrvision-quest3.apk'
 $Apk     = Join-Path $OutDir $ApkName
 $env:JAVA_HOME    = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.20.101-hotspot'
-$env:ANDROID_HOME = "$env:LOCALAPPDATA\Android\Sdk"
+# SDK 必须在 D:\，不能在 AppData：Claude 桌面应用里写进 AppData 的文件会被 MSIX 虚拟化，
+# Godot 编辑器看不到，Android 一键部署按钮就不会出现。
+$env:ANDROID_HOME = 'D:\Android\Sdk'
 $env:ANDROID_USER_HOME = "$env:USERPROFILE\.android"
-# 故意不把 SDK 的 platform-tools 加进 PATH：机器上 scrcpy 自带的 adb 已在系统 PATH 里，
-# 两个不同版本的 adb 会互相杀掉对方的服务，导致 Quest 连接反复断开。始终只用 PATH 里那个 adb。
+# 脚本、scrcpy、Godot 编辑器统一用 SDK 里的 adb：不同版本的 adb 会互相杀掉对方的服务，导致 Quest 反复断开。
+$env:PATH = "$env:ANDROID_HOME\platform-tools;$env:PATH"
+$env:ADB  = "$env:ANDROID_HOME\platform-tools\adb.exe"
 
 $GodotTags = @('godot:V', 'Godot:V', 'GodotActivity:V', 'AndroidRuntime:E', 'DEBUG:E')
 
@@ -37,6 +40,8 @@ function Wake {
 }
 
 function Build {
+    python (Join-Path $Project 'tools\bake_speech.py')
+    if ($LASTEXITCODE -ne 0) { throw '语音资源生成失败，已停止导出。' }
     New-Item -ItemType Directory -Force -Path $OutDir | Out-Null
     if (Test-Path $Apk) { Remove-Item $Apk -Force }
     $log = Join-Path $OutDir 'export.log'

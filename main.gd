@@ -11,7 +11,7 @@ func _ready() -> void:
 	Game.change_level(_first())
 
 
-## "-- --level=testbed" (or a full res:// path) boots straight into one level, so
+## "-- --level=island" (or a full res:// path) boots straight into one level, so
 ## a level can be opened without walking the game to it — including on the
 ## headset, where there is no F6: tools\quest.cmd run passes it through.
 func _first() -> String:

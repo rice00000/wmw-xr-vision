@@ -1,0 +1,10 @@
+{
+  "voices": {
+    "win32": {"name": "Microsoft David Desktop", "rate": -1},
+    "darwin": {"name": "Samantha", "rate": 175}
+  },
+  "lines": [],
+  "script_sources": ["modules/menu/menu.gd"],
+  "resource_roots": ["content/tasks", "content/items", "content/visual_skills", "content/stations", "content/trials/objects"],
+  "defaults": ["modules/trials/search/search_trial.gd", "modules/trials/catch/catch_trial.gd"]
+}

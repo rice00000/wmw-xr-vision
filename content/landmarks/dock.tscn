@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
-[ext_resource type="Material" path="res://shared/materials/plank.tres" id="1_8ynq1"]
-[ext_resource type="Material" path="res://shared/materials/bark.tres" id="2_he7jw"]
+[ext_resource type="Material" path="res://content/materials/plank.tres" id="1_8ynq1"]
+[ext_resource type="Material" path="res://content/materials/bark.tres" id="2_he7jw"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_sm4d0"]
 material = ExtResource("1_8ynq1")

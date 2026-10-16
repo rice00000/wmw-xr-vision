@@ -22,7 +22,7 @@ extends Node
 ##
 ## [b]Every other module is optional.[/b] With Tasks, Inventory or Save switched
 ## off, the page that needs it says so. The menu adds itself to [member
-## Game.player] at runtime, like the Debug panel, so the player rig knows
+## Game.player] at runtime, like the Facilitator panel, so the player rig knows
 ## nothing about it.
 ##
 ## What it needs from the rig, all duck-typed: hands in group [code]hand[/code]
@@ -66,11 +66,13 @@ const VOLUME_STEP := 0.1
 const MIN_VOLUME := 0.1
 const HAPTICS_STEP := 0.25
 const TURN_STEPS: Array[float] = [15.0, 22.5, 30.0, 45.0, 60.0, 90.0]
+const HEIGHT_STEP := 0.1
+const MAX_HEIGHT := 0.8 ## m, either way
 
 var is_open := false
 var page: StringName = &"home"
 ## Listed in the shop instead of every [member ItemDef.in_shop] item, when not
-## empty. For the Test Room and the test suite, which need something to buy.
+## empty. For the test suite, which needs something to buy.
 var shop_override: Array[ItemDef] = []
 
 var _player: Node3D
@@ -190,7 +192,7 @@ func show_page(page_name: StringName) -> void:
 
 
 ## Presses the visible button [param id] as a trigger would, minus the buzz.
-## For the Test Room's RUN ALL. Returns false when no such button is showing.
+## For the test suite. Returns false when no such button is showing.
 func press(id: StringName) -> bool:
 	var button := find_button(id)
 	if button == null:
@@ -215,7 +217,7 @@ func star() -> Node3D:
 	return _star
 
 
-## Everything the open page says, joined, for tests and the Test Room.
+## Everything the open page says, joined, for tests.
 func page_text() -> String:
 	var lines := PackedStringArray()
 	if _content:
@@ -635,6 +637,12 @@ func _settings_rows() -> Array:
 		{id = &"menu_set_turn_degrees_up", label = "More", icon = &"plus", say = "Turn more",
 			action = _turn.bind(1)},
 	]})
+	rows.append({text = "View height\n%s" % _height_words(Settings.value(&"height")), buttons = [
+		{id = &"menu_set_height_down", label = "Lower", icon = &"minus", say = "View lower",
+			action = _raise.bind(-HEIGHT_STEP)},
+		{id = &"menu_set_height_up", label = "Higher", icon = &"plus", say = "View higher",
+			action = _raise.bind(HEIGHT_STEP)},
+	]})
 	if _mod(&"Save") == null:
 		rows.append({text = "Start over needs Saving, which is switched off."})
 	elif _confirm_start_over:
@@ -774,6 +782,20 @@ func _turn(direction: int) -> void:
 	Settings.set_value(&"turn_degrees", value)
 	_say_status("Turn %d degrees" % roundi(value))
 	_dirty = true
+
+
+func _raise(step: float) -> void:
+	var value := clampf(snappedf(float(Settings.value(&"height")) + step, HEIGHT_STEP), -MAX_HEIGHT, MAX_HEIGHT)
+	Settings.set_value(&"height", value)
+	_say_status("View %s" % _height_words(value, "centimetres"))
+	_dirty = true
+
+
+func _height_words(height: float, unit := "cm") -> String:
+	var cm := roundi(height * 100.0)
+	if cm == 0:
+		return "as you are"
+	return "%d %s %s" % [absi(cm), unit, "higher" if cm > 0 else "lower"]
 
 
 func _ask_start_over() -> void:

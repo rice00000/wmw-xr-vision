@@ -1,10 +1,10 @@
 [gd_scene format=3]
 
-[ext_resource type="Material" path="res://shared/materials/log_wall.tres" id="1_ihb40"]
-[ext_resource type="Material" path="res://shared/materials/roof_tile.tres" id="2_yw460"]
-[ext_resource type="Material" path="res://shared/materials/bark.tres" id="3_wp5ld"]
-[ext_resource type="Material" path="res://shared/materials/cap_dark.tres" id="4_gy3y5"]
-[ext_resource type="Material" path="res://shared/materials/plank.tres" id="5_xqk4q"]
+[ext_resource type="Material" path="res://content/materials/log_wall.tres" id="1_ihb40"]
+[ext_resource type="Material" path="res://content/materials/roof_tile.tres" id="2_yw460"]
+[ext_resource type="Material" path="res://content/materials/bark.tres" id="3_wp5ld"]
+[ext_resource type="Material" path="res://content/materials/cap_dark.tres" id="4_gy3y5"]
+[ext_resource type="Material" path="res://content/materials/plank.tres" id="5_xqk4q"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_hvk01"]
 material = ExtResource("1_ihb40")

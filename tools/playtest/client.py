@@ -55,11 +55,19 @@ def launch(args):
         raise RuntimeError(f"Port {args.port} already has a session; quit it or choose another --port")
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
-    env = os.environ.copy() if args.headless else godot.xr_env()
+    synthetic_render = not args.headless and getattr(args, "fixture", None) == "interaction"
+    env = os.environ.copy() if args.headless or synthetic_render else godot.xr_env()
     command = [str(args.godot or godot.executable()), "--path", str(ROOT)]
-    command += ["--headless", "--xr-mode", "off"] if args.headless else ["--xr-mode", "on"]
-    command += ["--log-file", str(out / "godot.log"), "res://tools/playtest/session.tscn", "--",
+    if synthetic_render:
+        command += ["--xr-mode", "off", "--position", "20000,20000", "--resolution", "1280x800",
+                    "--script", "res://tools/playtest/render_session.gd"]
+    else:
+        command += ["--headless", "--xr-mode", "off"] if args.headless else ["--xr-mode", "on"]
+        command.append("res://tools/playtest/session.tscn")
+    command += ["--log-file", str(out / "godot.log"), "--",
                 f"--profile={args.profile}", f"--port={args.port}", f"--out={out.as_posix()}"]
+    if getattr(args, "fixture", None):
+        command.append("--fixture=" + args.fixture)
     with (out / "console.log").open("w", encoding="utf-8") as log:
         process = subprocess.Popen(command, cwd=ROOT, env=env, stdout=log, stderr=log,
                                    creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
@@ -74,7 +82,7 @@ def launch(args):
                     raise RuntimeError("Port answered from a different process")
                 print(json.dumps({"pid": process.pid, "port": args.port, "output": str(out),
                                   "task": state["task"], "profile": state["profile"]}, ensure_ascii=False))
-                return
+                return process
             except (OSError, RuntimeError):
                 time.sleep(0.2)
         raise TimeoutError("Playtest did not become ready; inspect " + str(out / "godot.log"))
@@ -101,6 +109,8 @@ def main():
         start.add_argument("--headless", action="store_true")
         start.add_argument("--out", default=str(ROOT / "build/playtest"))
         start.add_argument("--profile", default="playtest")
+        if name == "launch":
+            start.add_argument("--fixture", choices=["interaction"])
     sub.add_parser("state")
     where = sub.add_parser("where", help="Only object positions and offsets from each hand")
     where.add_argument("target", nargs="?", default="")
@@ -134,7 +144,14 @@ def main():
                        "--port", str(args.port), "--out", args.out]
             if args.headless:
                 command.append("--no-images")
-            sys.exit(subprocess.call(command, cwd=ROOT))
+            result = subprocess.call(command, cwd=ROOT)
+            if result:
+                sys.exit(result)
+            body_command = [sys.executable, str(Path(__file__).with_name("usability.py")),
+                            "--out", str(Path(args.out) / "body")]
+            if not args.headless:
+                body_command.append("--rendered")
+            sys.exit(subprocess.call(body_command, cwd=ROOT))
         return
     client = Client(args.port)
     if args.command == "where":

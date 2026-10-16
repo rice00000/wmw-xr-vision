@@ -13,13 +13,11 @@ key	sound	options	note
 #
 # Saving this file takes effect within a second while the game runs from the editor.
 # Mistakes (unknown option, missing clip, duplicate key) are printed at load and fail python tools/test.py.
-# Keys the game sent that are not here are printed as AUDIO_UNMAPPED and listed in the Test Room.
+# Keys the game sent that are not here are printed as AUDIO_UNMAPPED and fail python tools/test.py.
 
 # ===== interface =====
 pressed	tone:520/70	space=3d cd=0.08	every button in the game, at the button
 pressed.hello	tone:760/110	space=3d	a named button's own sound (the sound-table test uses it as its example)
-pressed.board_run	tone:840/90	space=3d	Test Room: RUN ALL
-pressed.board_reset	tone:300/90	space=3d	Test Room: RESET
 
 # ===== feedback (Events.judge: one sound, one shape mark, one vibration; never colour alone) =====
 # Good and bad differ in rhythm and length as well as pitch, so they are told apart by anyone.
@@ -69,7 +67,3 @@ asked	-		B / Y. The guide repeating the line is the feedback
 # Needs real recordings to be worth switching on; tones would be unbearable in a loop.
 ambience	-		no bed anywhere until there are recordings
 ambience.island		bus=ambience loop vol=-14	birds, wind and small waves
-
-# ===== the Test Room (dev only) =====
-selftest	tone:600/60		the task self-test fact
-pressed.Check09SoundTable_beep	tone:1000/90	space=3d	Test Room: the Audio table station. Its own row so the shared "pressed" cooldown cannot swallow it

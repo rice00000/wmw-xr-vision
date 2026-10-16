@@ -52,7 +52,7 @@ meadow station. Caught = success, flew away after time_limit = fail.
 
 Driven axis: speed, and only speed. Following a moving target is the visual skill;
 how big, how far and how faint it is stay pinned so a miss is attributable to
-one thing. Pin the others from the debug menu to test a different point.
+one thing. Pin the others from the facilitator panel to test a different point.
 
 distance is metres in front of the child's eyes (within a seated child's
 reach at 0.55). contrast is Weber contrast against the meadow grass material

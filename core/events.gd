@@ -42,7 +42,7 @@ signal save_requested
 ## what you hold and drop everything the world was doing. The level goes next.
 signal profile_closing
 ## The new profile's files are in place: load from them. [param wiped] = it was
-## just wiped (Start over, the Test Room). The first level is built right after.
+## just wiped (Start over). The first level is built right after.
 signal profile_opened(wiped: bool)
 
 ## The goal changed: what the child should do now, where, and how far along.
@@ -58,10 +58,10 @@ signal goal_changed(goal: Goal)
 signal feedback(kind: StringName, position: Vector3)
 
 ## Read [param text] aloud without a subtitle, e.g. a menu button being pointed at.
-## Handled by Audio (text-to-speech when the read_aloud setting is on).
+## Handled by Audio (baked speech when the read_aloud setting is on).
 signal read_aloud(text: String)
 
-## A modal UI (ordinary menu or Debug) opened or closed. Only one is open;
+## A modal UI (ordinary menu or Facilitator) opened or closed. Only one is open;
 ## while open, play pauses and the wrist and guide subtitles hide.
 signal menu_toggled(open: bool)
 

@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="Material" path="res://shared/materials/leaves_bush.tres" id="1_hdqdg"]
+[ext_resource type="Material" path="res://content/materials/leaves_bush.tres" id="1_hdqdg"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_lsd1r"]
 material = ExtResource("1_hdqdg")

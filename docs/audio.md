@@ -77,19 +77,12 @@ gameplay code may make.
 
 ## Speech, for everything not recorded yet
 
-Many of the children this is for read poorly, so nothing should exist only as
-text. While the **Read aloud** setting is on, the module speaks with the
-platform's text-to-speech (an English voice):
-
-- the Narrator's current line when it carries **no** clip (one at a time, in order; see [state-and-narration.md](state-and-narration.md));
-- every `Events.read_aloud(text)` — a wrist-menu button a controller ray hovers
-  over, a page coming up, "You need 1 more Magic Stone". A new one cuts off the
-  one before, so pointing along a row reads the button under the pointer, not a
-  backlog.
-
-Recording a line later is just passing the clip to `Narrator.say`; the speech for
-it stops by itself. `Audio.speech` lists every request (`say: …` / `read: …`),
-so the suite can see a line arrive on a machine with no speech engine.
+While **Read aloud** is on, unrecorded Narrator lines and `Events.read_aloud(text)`
+play [baked speech](baked-speech.md). The editor generates changed audio in the
+background; Windows and Quest both play files, with no runtime TTS dependency.
+Menu speech replaces the previous menu line and never interrupts the guide.
+Passing a recording to `Narrator.say` uses that recording instead.
+`Audio.speech` records requests (`say: …` / `read: …`) for tests.
 
 **Volumes** follow Settings live: *Volume* on the Master bus, *Voice* on the
 Voice bus and on speech. The module runs while the tree is paused, because the
@@ -102,8 +95,8 @@ misspelt, a key that appears twice: all are collected when the file loads,
 printed, and fail `python tools/test.py`. A row never silently does nothing.
 
 **The table cannot fall behind.** Every key the game sends that no row answers
-is printed once as `AUDIO_UNMAPPED`, shown live on the Test Room's *Audio:
-table* station, and asserted empty by the suite after a full playthrough. A new
+is printed once as `AUDIO_UNMAPPED` and asserted empty by the suite after a
+full playthrough. A new
 fact in the game forces a decision here — a sound, or an explicit `-`.
 
 ## Before anything is recorded
@@ -130,5 +123,4 @@ content/audio/sounds.tsv       the table
 ```
 
 Switch the `Audio` autoload off in *Project Settings → Globals* and the game is
-silent and otherwise unchanged, as with any module. Its two Test Room stations
-then say MODULE OFF while the rest still pass.
+silent and otherwise unchanged, as with any module.

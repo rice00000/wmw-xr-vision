@@ -1,8 +1,8 @@
 [gd_scene format=3]
 
-[ext_resource type="Material" path="res://shared/materials/meadow_lawn.tres" id="1_gn601"]
-[ext_resource type="Material" path="res://shared/materials/leaves.tres" id="2_p80r3"]
-[ext_resource type="Material" path="res://shared/materials/flower_head.tres" id="3_3fs52"]
+[ext_resource type="Material" path="res://content/materials/meadow_lawn.tres" id="1_gn601"]
+[ext_resource type="Material" path="res://content/materials/leaves.tres" id="2_p80r3"]
+[ext_resource type="Material" path="res://content/materials/flower_head.tres" id="3_3fs52"]
 
 [sub_resource type="CylinderMesh" id="CylinderMesh_uobgt"]
 material = ExtResource("1_gn601")

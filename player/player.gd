@@ -11,12 +11,17 @@ extends XROrigin3D
 ##
 ## The rig runs with PROCESS_MODE_ALWAYS so head and hands keep tracking while the
 ## wrist menu pauses the tree; its movement and hands check the pause themselves.
+##
+## Settings.height raises or lowers the whole rig over the floor, live, so a child
+## who sits or a tall tester sees the world from where they like. No button for it:
+## it is on the wrist menu's Settings page, and real crouching still works.
 
 @onready var camera := $Camera as XRCamera3D
 
 var _menu_down := false
 var _y_down := false
 var _chord_used := false
+var _height := 0.0 # the Settings.height currently applied
 
 
 func _enter_tree() -> void:
@@ -33,13 +38,30 @@ func _ready() -> void:
 	for controller: XRController3D in [$LeftController, $RightController]:
 		controller.button_pressed.connect(_on_button_pressed.bind(controller))
 		controller.button_released.connect(_on_button_released.bind(controller))
+	Settings.changed.connect(_on_setting_changed)
+	_set_height(Settings.value(&"height"))
 
 
 ## Moves the rig so the player's head (not the play-area centre) stands on [param xform].
 func place(xform: Transform3D) -> void:
 	global_transform = xform
 	var head := camera.global_position - global_position
-	global_position -= Vector3(head.x, 0.0, head.z)
+	global_position -= Vector3(head.x, -_height, head.z)
+
+
+## The height of the floor the player stands on (the rig sits Settings.height off it).
+func floor_y() -> float:
+	return global_position.y - _height
+
+
+func _set_height(height: float) -> void:
+	global_position.y += height - _height
+	_height = height
+
+
+func _on_setting_changed(key: StringName, value: Variant) -> void:
+	if key == &"height":
+		_set_height(value)
 
 
 func _on_head_entered(area: Area3D) -> void:
@@ -47,7 +69,7 @@ func _on_head_entered(area: Area3D) -> void:
 		area.player_entered(self)
 
 
-## Menu and Y are release actions until their overlap consumes both as Debug.
+## Menu and Y are release actions until their overlap consumes both as Facilitator.
 ## A chord fires once, in either order, and stays consumed until both are up.
 func _on_button_pressed(action: String, controller: XRController3D) -> void:
 	if controller == $LeftController:
@@ -57,7 +79,7 @@ func _on_button_pressed(action: String, controller: XRController3D) -> void:
 			_y_down = true
 		if _menu_down and _y_down and not _chord_used:
 			_chord_used = true
-			Events.report(&"asked", &"debug")
+			Events.report(&"asked", &"facilitator")
 	elif action == "by_button": # right B still asks immediately
 		Events.report(&"asked", &"help")
 

@@ -10,8 +10,8 @@ extends Node3D
 ## full); reports "taken_out:<id>". Letting go settles it upright (Placeable,
 ## "placed:<id>").
 ##
-## Out: while a hand holds one of these items, a small "put away" button floats
-## over it. Touching that with the other hand puts it back in the bag: +1 in the
+## Out: while a hand holds one of these items, a "put away" button waits within
+## reach in front of the player. Touching it with the other hand puts it back: +1 in the
 ## Inventory, "put_away:<id>", and it shrinks away. Two moves, no menu.
 ##
 ## Hand-placed children are left alone; only spawned items (meta "item_id") are saved.
@@ -20,8 +20,6 @@ const BUTTON := preload("res://modules/placement/put_away_button.tscn")
 const META := &"item_id"
 
 @export var save_key := &"decor_layout"
-## Height of the put-away button above the top of the held item.
-@export var button_gap := 0.12
 ## Where the item goes when both hands are full: this far in front of the eyes.
 @export var front_distance := 0.4
 

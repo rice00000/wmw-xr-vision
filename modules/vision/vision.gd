@@ -14,7 +14,7 @@ var _outline := ShaderMaterial.new()
 
 
 func _ready() -> void:
-	_outline.shader = preload("res://shared/outline.gdshader")
+	_outline.shader = preload("res://components/outline.gdshader")
 	Events.level_changed.connect(_on_level_changed)
 	Events.profile_opened.connect(func(_wiped: bool) -> void: profile = null) # the next child starts with plain sight
 	get_tree().node_added.connect(_on_node_added)

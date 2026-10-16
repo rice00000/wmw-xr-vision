@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="Material" path="res://shared/materials/wood.tres" id="4_material"]
+[ext_resource type="Material" path="res://content/materials/wood.tres" id="4_material"]
 
 [sub_resource type="SphereMesh" id="SphereMesh_0"]
 radius = 0.085

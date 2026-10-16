@@ -1,8 +1,8 @@
 [gd_scene format=3]
 
-[ext_resource type="Material" path="res://shared/materials/water.tres" id="1_kebnc"]
-[ext_resource type="Material" path="res://shared/materials/sand.tres" id="2_d5okk"]
-[ext_resource type="Material" path="res://shared/materials/lawn.tres" id="3_ttxdo"]
+[ext_resource type="Material" path="res://content/materials/water.tres" id="1_kebnc"]
+[ext_resource type="Material" path="res://content/materials/sand.tres" id="2_d5okk"]
+[ext_resource type="Material" path="res://content/materials/lawn.tres" id="3_ttxdo"]
 
 [sub_resource type="PlaneMesh" id="PlaneMesh_i3apa"]
 material = ExtResource("1_kebnc")

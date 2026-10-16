@@ -16,10 +16,6 @@ run/main_scene="res://main.tscn"
 config/features=PackedStringArray("4.7", "Mobile")
 config/icon="res://icon.svg"
 
-[audio]
-
-general/text_to_speech=true
-
 [autoload]
 
 Events="*res://core/events.gd"
@@ -34,13 +30,17 @@ Training="*res://modules/trials/training.gd"
 Vision="*res://modules/vision/vision.gd"
 Audio="*res://modules/audio/audio.gd"
 Menu="*res://modules/menu/menu.gd"
-Debug="*res://modules/debug/debug.gd"
+Facilitator="*res://modules/facilitator/facilitator.gd"
 
 [display]
 
 window/size/window_width_override.macos=320
 window/size/window_height_override.macos=180
 window/size/always_on_top.macos=true
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/speech_baker/plugin.cfg")
 
 [physics]
 

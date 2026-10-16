@@ -11,7 +11,7 @@ extends Node
 ## It remembers any material_overlay that was already there (Vision's, say) and
 ## puts it back on [method clear].
 
-const SHADER := preload("res://shared/outline.gdshader")
+const SHADER := preload("res://components/outline.gdshader")
 
 @export var width := 0.016
 

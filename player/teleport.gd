@@ -1,7 +1,7 @@
 extends Node3D
 ## Comfort teleport: push the right stick forward to aim with the right hand,
 ## let go to jump there. Only floors (surfaces facing up) are valid targets.
-## Works in both move modes and on seated levels; never while the world is paused.
+## Works in both move modes; never while the world is paused.
 ## Delete this node if you don't want teleporting.
 
 @export var stick_action := &"primary"

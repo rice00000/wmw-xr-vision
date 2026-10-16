@@ -1,0 +1,15 @@
+{
+  "assumptions": "Synthetic seated regression profiles, not measured child percentiles or clinical comfort limits. Calibrate against headset playtests.",
+  "profiles": [
+    {"name": "short_reach", "eye_height": 1.05, "shoulder_half_width": 0.14, "shoulder_drop": 0.22, "arm_length": 0.50, "comfortable_reach": 0.44},
+    {"name": "medium_reach", "eye_height": 1.25, "shoulder_half_width": 0.17, "shoulder_drop": 0.25, "arm_length": 0.61, "comfortable_reach": 0.53},
+    {"name": "long_reach", "eye_height": 1.45, "shoulder_half_width": 0.20, "shoulder_drop": 0.28, "arm_length": 0.72, "comfortable_reach": 0.62}
+  ],
+  "limits": {
+    "horizontal_fov": 90, "vertical_fov": 80, "view_margin": 5,
+    "max_head_yaw": 60, "max_head_pitch": 45, "min_target_degrees": 2,
+    "min_clear_fraction": 0.8, "max_hand_speed": 0.8,
+    "hand_radius": 0.07, "torso_radius": 0.10,
+    "sample_seconds": 0.04, "path_step": 0.02, "anchor_tolerance": 0.015
+  }
+}

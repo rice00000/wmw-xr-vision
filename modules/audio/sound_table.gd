@@ -7,16 +7,12 @@ extends RefCounted
 ## [codeblock]
 ## pressed              tone:520/70    every button in the game
 ## pressed.hello        tone:700/90    except this one
-## pressed.dbg_up       -              and this one makes no sound at all
+## pressed.fac_up       -              and this one makes no sound at all
 ## [/codeblock]
-## Looking up [code]pressed.dbg_up[/code] stops at the dash (silent); looking up
+## Looking up [code]pressed.fac_up[/code] stops at the dash (silent); looking up
 ## [code]pressed.anything_else[/code] falls back to [code]pressed[/code]. A row
 ## with an empty clip cell is a placeholder for whoever is filling the table in:
 ## it means "still inherit", not "silent".
-##
-## Tab-separated rather than a .tres per sound, unlike the rest of content/,
-## because this is fifty one-line rows that an artist edits in a spreadsheet,
-## not a handful of substantial objects. Lines starting with # are notes.
 ##
 ## Everything that can be wrong with a row is collected in [member errors] at
 ## load: an unknown option, a clip file that is not there, a duplicate key. The

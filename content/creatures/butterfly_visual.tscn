@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
-[ext_resource type="Material" path="res://shared/materials/butterfly_yellow.tres" id="1_wings"]
-[ext_resource type="Material" path="res://shared/materials/dark.tres" id="2_body"]
+[ext_resource type="Material" path="res://content/materials/butterfly_yellow.tres" id="1_wings"]
+[ext_resource type="Material" path="res://content/materials/dark.tres" id="2_body"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_wing"]
 size = Vector3(0.18, 0.012, 0.14)

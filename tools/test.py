@@ -6,6 +6,13 @@ import sys
 
 import godot
 
-sys.exit(subprocess.call([str(godot.executable(console=True)), "--headless", "--xr-mode", "off",
-                          "--path", str(godot.ROOT), "res://tests/smoke_test.tscn", "--",
-                          "--profile=smoke_test"]))
+commands = [
+    [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py"],
+    [str(godot.executable(console=True)), "--headless", "--xr-mode", "off",
+     "--path", str(godot.ROOT), "res://tests/smoke_test.tscn", "--", "--profile=smoke_test"],
+    [sys.executable, "tools/playtest/usability.py"],
+]
+for command in commands:
+    result = subprocess.call(command, cwd=godot.ROOT)
+    if result:
+        sys.exit(result)

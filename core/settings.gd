@@ -17,6 +17,7 @@ const DEFAULTS := {
 	&"haptics": 1.0, ## 0-1 vibration strength
 	&"move_mode": &"walk", ## &"walk" (stick + teleport) or &"teleport" (teleport only)
 	&"turn_degrees": 30.0, ## snap turn step
+	&"height": 0.0, ## m the view sits above (+) or below (-) the child's real head
 }
 
 var _values: Dictionary = DEFAULTS.duplicate()

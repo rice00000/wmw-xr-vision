@@ -20,7 +20,7 @@ extends RefCounted
 const COLOR := Color(1.0, 0.85, 0.2)
 ## Wider than Highlight.width, so both rims show at once.
 const WIDTH := 0.024
-const SHADER := preload("res://shared/outline.gdshader")
+const SHADER := preload("res://components/outline.gdshader")
 const META := &"hovered"
 const SHELL := &"HoverShell"
 

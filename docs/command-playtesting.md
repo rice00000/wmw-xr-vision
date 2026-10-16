@@ -1,5 +1,29 @@
 # Command-Line Control and Visual Inspection
 
+## Body constraints
+
+`python tools/test.py` runs framework unit tests, game smoke tests, and the body suite.
+`python tools/playtest/usability.py` runs the body suite alone; `--rendered` adds synthetic eye-view PNGs without a headset/runtime.
+`client.py demo` runs both the functional walkthrough and the body suite.
+
+New physical scenarios use `Actor` in `tools/playtest/actor.py`: `grab`, `watch`, `move`, `rotate`, `look`, `touch`, `expect`.
+`Client` remains unrestricted transport for fixture setup and functional tests; it cannot establish usability.
+`usability.py` contains the furniture example. Add scenarios to `run_cases` so the standard command includes them.
+
+- `body_profiles.json`: editable synthetic seated dimensions and limits; not measured child percentiles.
+- `body.py`: shoulder reach, torso clearance, head limits, view cone, angular size and visibility policy.
+- `observation.gd`: engine poses, mesh bounds, collision-proxy occlusion and swept hand paths.
+- `interaction_fixture.gd`: real furniture/player components, isolated from player saves; deliberate faults exist only here.
+
+The actor preflights paths, limits movement speed and checks intermediate observations. Shoulders stay fixed when the head turns.
+Touch checks use the hand and button surfaces, rather than demanding that their centres meet.
+`watch(..., stable=True)` catches prompts that move during reaching. Scenarios must assert the actual gameplay outcome.
+
+`build/playtest-body/body-report.json` records profile-specific results and expected fault rejections; `body-trace.jsonl` records poses and observations.
+Wrong rejection reasons and undetected faults fail the suite. Coverage includes both hands, three profiles, translated/rotated bodies, chair/lamp storage and deliberate reach/view/path faults.
+
+Limits: assumed torso/shoulders, no elbow biomechanics; configured view cone rather than device per-eye FOV; physics proxies rather than pixel occlusion. Comfort, recognition and readability still need headset playtests.
+
 This is a standalone testing entry point at `<span>tools/playtest/session.tscn</span>`, which loads the existing `<span>main.tscn</span>`.
 
 No changes are required to the existing game scripts, scenes, or project configuration.The testing interface is not loaded during normal gameplay.
@@ -142,13 +166,13 @@ python tools/playtest/client.py demo --headless
 
 This does not generate screenshots and cannot be considered a visual test.
 
-## Menu Button and Debug UI
+## Menu Button and Facilitator Panel
 
 The regular menu toggles when the left controller's `<span>menu_button</span>`is released. The corresponding key in the simulator is `<span>M</span>`.
 
-Holding Menu together with the left controller's `<span>by_button</span>`(`<span>Y</span>`) toggles the Debug UI.
+Holding Menu together with the left controller's `<span>by_button</span>`(`<span>Y</span>`) toggles the Facilitator panel.
 
-The buttons can be pressed or released in either order. The Debug UI will not toggle again until both buttons have been released. This combination also prevents the regular menu from opening and does not trigger the help action.
+The buttons can be pressed or released in either order. The Facilitator panel will not toggle again until both buttons have been released. This combination also prevents the regular menu from opening and does not trigger the help action.
 
 Releasing `<span>Y</span>`by itself still triggers help.
 
@@ -157,13 +181,15 @@ python tools/playtest/client.py send '{"op":"button","hand":"left","action":"men
 python tools/playtest/client.py send '{"op":"button","hand":"left","action":"by_button","pressed":true}'
 python tools/playtest/client.py send '{"op":"button","hand":"left","action":"by_button","pressed":false}'
 python tools/playtest/client.py send '{"op":"button","hand":"left","action":"menu_button","pressed":false}'
-python tools/playtest/client.py click dbg_saves --hand left
-python tools/playtest/client.py click dbg_training
-python tools/playtest/client.py click dbg_close
+python tools/playtest/client.py click fac_saves --hand left
+python tools/playtest/client.py click fac_training
+python tools/playtest/client.py click fac_close
 ```
 
-The `<span>debug_open</span>`field in `<span>state</span>`indicates whether the Debug UI is open. The `<span>buttons</span>`field also lists the native UI buttons that are currently visible.
+The `<span>facilitator_open</span>`field in `<span>state</span>`indicates whether the Facilitator panel is open. The `<span>buttons</span>`field also lists the native UI buttons that are currently visible.
 
-`<span>aim</span>`and `<span>click</span>`target the center of each button's rectangle after layout and perform clicks through actual `<span>SubViewport</span>`mouse input. They do not directly invoke Debug UI action functions.
+`<span>aim</span>`and `<span>click</span>`target the center of each button's rectangle after layout and perform clicks through actual `<span>SubViewport</span>`mouse input. They do not directly invoke Facilitator panel action functions.
 
-During training, you can use axis-specific buttons such as `<span>dbg_overlap_up</span>`. The `<span>dbg_auto</span>`button clears all pins.
+During training, you can use axis-specific buttons such as `<span>fac_overlap_up</span>`. The `<span>fac_auto</span>`button clears all pins.
+
+On the Saves tab, `fac_slot_<id>` loads a save (newest played first, five per page, `fac_prev` / `fac_next`). `fac_new_save` opens the name keyboard: `fac_key_A`…`fac_key_9`, `fac_space`, `fac_erase`, then `fac_create` (Start fresh: a new game, played at once), `fac_copy` (Copy this save: a checkpoint of this save's progress and settings, not its research log; play carries on here) or `fac_cancel`.

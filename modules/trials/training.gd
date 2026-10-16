@@ -27,7 +27,7 @@ const UP_AFTER := 2
 
 var _levels: Dictionary[StringName, float] = {}
 var _streaks: Dictionary[StringName, int] = {}
-## Axis name -> pinned value, set by the debug menu. Overrides the staircase
+## Axis name -> pinned value, set by the facilitator panel. Overrides the staircase
 ## until unpinned or until another profile is opened.
 var _overrides: Dictionary[StringName, float] = {}
 var _log: FileAccess
@@ -60,7 +60,7 @@ func condition(trial_id: StringName, round_index := 0, probe := false) -> TrialC
 	return def.condition(difficulty, round_index, probe, _overrides)
 
 
-## Pin an axis to [param value] for every following round (debug menu).
+## Pin an axis to [param value] for every following round (facilitator panel).
 func pin(axis: StringName, value: float) -> void:
 	_overrides[axis] = value
 

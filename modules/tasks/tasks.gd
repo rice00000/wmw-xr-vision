@@ -142,8 +142,8 @@ func is_done(task_id: StringName) -> bool:
 	return times_done(task_id) > 0
 
 
-## Starts a task whether or not it is on offer: a chain, [member TaskDef.start_on],
-## the Test Room. Refused while another task is running, or for a task already
+## Starts a task whether or not it is on offer: a chain or [member TaskDef.start_on].
+## Refused while another task is running, or for a task already
 ## done that is not repeatable.
 func start(task_id: StringName) -> bool:
 	if not _current.is_empty():

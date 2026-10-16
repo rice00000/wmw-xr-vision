@@ -1,6 +1,6 @@
 [gd_scene format=3]
 
-[ext_resource type="Material" path="res://shared/materials/wood.tres" id="4_material"]
+[ext_resource type="Material" path="res://content/materials/wood.tres" id="4_material"]
 
 [sub_resource type="BoxMesh" id="BoxMesh_0"]
 size = Vector3(0.1, 0.06, 0.26)

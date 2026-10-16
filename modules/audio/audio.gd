@@ -32,14 +32,14 @@ extends Node
 ##
 ## [b]The guide's voice[/b] is the Narrator's current line and nothing else:
 ## this module speaks [member Narrator.current] when it starts (its recording, or
-## text-to-speech while the [code]read_aloud[/code] setting is on), tells the
+## baked speech while the [code]read_aloud[/code] setting is on), tells the
 ## Narrator when it has really finished, and stops when the world pauses. It
 ## keeps no queue, so it cannot get ahead of or behind the subtitle.
 ## [br][signal Events.read_aloud] (a menu button being pointed at; a new one cuts
 ## off the one before) is spoken too, but never over the guide: while the world
 ## runs and a line is being said, it is skipped. Many of the children this is for
 ## read poorly, so nothing on screen should exist only as text. [member speech]
-## records each request, so a test can see it arrive with no speech engine present.
+## records each request, so a test can see it arrive with no audio device present.
 ##
 ## [b]Volumes[/b] follow [Settings] live: [code]volume_master[/code] on the
 ## Master bus, [code]volume_voice[/code] on the Voice bus and on speech.
@@ -63,9 +63,6 @@ const AMBIENCE_FADE := 0.8
 ## How often the table is re-read while running from the editor.
 const RELOAD_SECONDS := 1.0
 const TONE_RATE := 22050
-## Speech speed. A little under normal: the listeners are children, some of
-## them hearing the words for the things they are only now seeing.
-const SPEECH_RATE := 0.9
 
 ## Recorded lines and sounds started since launch. A test can say "the sound
 ## reached the seam" from these with no audio device.
@@ -74,22 +71,23 @@ var cued := 0
 
 var table: SoundTable
 ## Keys the game sent that no row answers. Printed once each while running from
-## the editor, and shown by the Test Room, so the table can never quietly fall
+## the editor, and failed by the smoke test, so the table can never quietly fall
 ## behind the game.
 var unmapped: Dictionary[String, bool] = {}
 ## "<key> -> <clip>" for everything played, newest last. Lets a test name the
 ## sound a fact produced; capped so a long session cannot grow without bound.
 var played: PackedStringArray = []
-## Every text-to-speech request since launch, newest last, as "say: <text>"
+## Every baked-speech request since launch, newest last, as "say: <text>"
 ## (the Narrator's line) or "read: <text>" (read aloud).
-## Recorded whether or not a speech engine is present, so the headless suite can
+## Recorded whether or not an audio device is present, so the headless suite can
 ## assert that a line reached the seam. Capped like [member played].
 var speech: PackedStringArray = []
 
 var _guide := AudioStreamPlayer.new()
-## The Narrator line being spoken, and the utterance speaking it (0 = a recording).
+var _reader := AudioStreamPlayer.new()
+## The Narrator line being spoken, and whether its voice was generated.
 var _line: VoiceLine
-var _line_utterance := 0
+var _generated_line := false
 var _flat: Array[AudioStreamPlayer] = []
 var _spatial: Array[AudioStreamPlayer3D] = []
 var _started_ms: Dictionary[int, int] = {} # player id -> when it started
@@ -101,11 +99,6 @@ var _table_time := 0
 var _since_reload := 0.0
 var _verbose := false
 var _ducked := false
-## The text-to-speech voice, picked once; empty = no speech engine (headless,
-## or a platform without one), and requests are only recorded.
-var _tts_voice := ""
-var _tts_checked := false
-var _utterance := 0
 
 
 func _ready() -> void:
@@ -116,7 +109,9 @@ func _ready() -> void:
 	Settings.changed.connect(_on_setting_changed)
 	_guide.bus = &"Voice"
 	add_child(_guide)
-	_guide.finished.connect(_on_line_done.bind(0))
+	_guide.finished.connect(_on_line_done)
+	_reader.bus = &"Voice"
+	add_child(_reader)
 	for _i in FLAT_VOICES:
 		var player := AudioStreamPlayer.new()
 		add_child(player)
@@ -131,7 +126,11 @@ func _ready() -> void:
 	reload()
 	Narrator.line_started.connect(_on_line_started)
 	Narrator.line_ended.connect(_on_line_ended)
-	Narrator.paused_changed.connect(func(_paused: bool) -> void: _hush())
+	Narrator.paused_changed.connect(func(paused: bool) -> void:
+		_hush()
+		if not paused:
+			_reader.stop())
+	Events.profile_closing.connect(_reader.stop)
 	Events.read_aloud.connect(_on_read_aloud)
 	Events.feedback.connect(_on_feedback)
 	Events.cue.connect(_on_stream_cue)
@@ -184,7 +183,7 @@ func cue(key: String, position: Variant = null) -> void:
 
 ## True while anything is sounding.
 func is_playing() -> bool:
-	if _guide.playing or _ambience.playing:
+	if _guide.playing or _reader.playing or _ambience.playing:
 		return true
 	for player in _flat:
 		if player.playing:
@@ -255,20 +254,17 @@ func _on_feedback(kind: StringName, position: Vector3) -> void:
 
 func _on_line_started(line: VoiceLine) -> void:
 	_hush()
-	if line.voice:
-		spoken += 1
-		_line = line
-		_line_utterance = 0
-		_guide.stream = line.voice
-		_guide.play()
-		_duck(true)
-		Narrator.speaking(line)
+	_reader.stop()
+	_generated_line = line.voice == null
+	var voice := line.voice if line.voice else _speech_stream("say", line.text)
+	if voice == null:
 		return
-	var utterance := _speak("say", line.text)
-	if utterance > 0:
-		_line = line
-		_line_utterance = utterance
-		Narrator.speaking(line)
+	spoken += 1
+	_line = line
+	_guide.stream = voice
+	_guide.play()
+	_duck(true)
+	Narrator.speaking(line)
 
 
 ## Dropped before its end (a new level, another player): stop saying it.
@@ -277,9 +273,9 @@ func _on_line_ended(line: VoiceLine) -> void:
 		_hush()
 
 
-## The recording ([param utterance] 0) or the utterance saying the line is over.
-func _on_line_done(utterance: int) -> void:
-	if _line and utterance == _line_utterance:
+## A recorded or baked line has finished playing.
+func _on_line_done() -> void:
+	if _line:
 		var line := _line
 		_line = null
 		Narrator.spoken(line)
@@ -293,8 +289,6 @@ func _hush() -> void:
 	_line = null
 	if _guide.playing:
 		_guide.stop()
-	if _speaking():
-		DisplayServer.tts_stop()
 
 
 ## A stream a task is holding, played where it happened. Kept because a task can
@@ -315,45 +309,22 @@ func _on_stream_cue(sound: AudioStream, position: Vector3) -> void:
 func _on_read_aloud(text: String) -> void:
 	if text.is_empty() or (Narrator.current != null and not Narrator.is_paused()):
 		return
-	_speak("read", text)
+	var voice := _speech_stream("read", text)
+	if voice:
+		_reader.stream = voice
+		_reader.play()
 
 
 # -- speech -----------------------------------------------------------------
 
-## Speaks [param text] over anything being spoken. Returns the utterance id, or
-## 0 when nothing will be heard (read-aloud off, no speech engine).
-func _speak(kind: String, text: String) -> int:
+## Resolves text to existing audio files. No synthesis occurs during gameplay.
+func _speech_stream(kind: String, text: String) -> AudioStream:
 	if not Settings.value(&"read_aloud"):
-		return 0
+		return null
 	if speech.size() >= 200:
 		speech = speech.slice(100)
 	speech.append("%s: %s" % [kind, text])
-	if _voice().is_empty():
-		return 0
-	var volume := clampf(Settings.value(&"volume_master") * Settings.value(&"volume_voice"), 0.0, 1.0)
-	_utterance += 1
-	DisplayServer.tts_speak(text, _tts_voice, roundi(volume * 100.0), 1.0, SPEECH_RATE, _utterance, true)
-	return _utterance
-
-
-## An English voice, looked up once. Empty when there is no speech engine.
-func _voice() -> String:
-	if _tts_checked:
-		return _tts_voice
-	_tts_checked = true
-	if DisplayServer.get_name() == "headless" or not ProjectSettings.get_setting("audio/general/text_to_speech", false):
-		return _tts_voice
-	var voices := DisplayServer.tts_get_voices_for_language("en")
-	if not voices.is_empty():
-		_tts_voice = voices[0]
-		# The engine may call back from its own thread: answer on the main one.
-		for event in [DisplayServer.TTS_UTTERANCE_ENDED, DisplayServer.TTS_UTTERANCE_CANCELED]:
-			DisplayServer.tts_set_utterance_callback(event, func(id: int) -> void: _on_line_done.call_deferred(id))
-	return _tts_voice
-
-
-func _speaking() -> bool:
-	return not _tts_voice.is_empty() and DisplayServer.tts_is_speaking()
+	return BakedSpeech.stream(text)
 
 
 # -- playing ----------------------------------------------------------------
@@ -390,7 +361,7 @@ func _play_ambience(key: String, stream: AudioStream, def: SoundDef) -> void:
 	_note(key, "(loop)")
 
 
-## Everything else steps back while the guide talks, recorded or synthesised.
+## Everything else steps back while a recorded or baked voice plays.
 func _duck(on: bool) -> void:
 	if on == _ducked:
 		return
@@ -456,7 +427,9 @@ func _on_setting_changed(key: StringName, value: Variant) -> void:
 		&"volume_master", &"volume_voice":
 			_apply_volumes()
 		&"read_aloud":
-			if not value and _line and _line_utterance > 0:
+			if not value:
+				_reader.stop()
+			if not value and _line and _generated_line:
 				var line := _line
 				_hush()
 				Narrator.spoken(line) # nothing left to wait for: reading time alone
@@ -478,8 +451,7 @@ func _set_bus_volume(bus: StringName, linear: float) -> void:
 ## Saving the table takes effect within a second while running from the editor,
 ## so a sound can be tuned without restarting the game.
 func _process(delta: float) -> void:
-	if not _guide.playing:
-		_duck(_speaking())
+	_duck(_guide.playing or _reader.playing)
 	if not _verbose:
 		return
 	_since_reload += delta

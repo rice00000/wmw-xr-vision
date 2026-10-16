@@ -51,7 +51,7 @@ static func find(trial_id: StringName) -> TrialDef:
 
 
 ## Resolves every axis at [param difficulty] into the settings for one round.
-## [param overrides] pins axes by name (the debug menu).
+## [param overrides] pins axes by name (the facilitator panel).
 func condition(difficulty: float, round_index := 0, probe := false, overrides: Dictionary = {}) -> TrialCondition:
 	var trial_condition := TrialCondition.new()
 	trial_condition.trial = id

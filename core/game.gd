@@ -47,13 +47,8 @@ func module(module_name: StringName) -> Node:
 ## Fades out, frees the current level and builds [param path]. [param between]
 ## runs once the old level is gone and before the new one exists: the moment to
 ## swap what the next level will load (another player's files).
-## The Test Room always opens on its own throwaway profile, however it is asked
-## for (the debug panel, a door, [code]--level=testbed[/code]).
 func change_level(path: String, between := Callable()) -> void:
 	if _changing:
-		return
-	if path == Profile.TESTBED and not between.is_valid() and not Profile.is_test_room():
-		Profile.open_test_room()
 		return
 	_changing = true
 	Events.level_changing.emit(path)

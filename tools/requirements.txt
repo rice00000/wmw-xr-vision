@@ -1,0 +1,2 @@
+pywin32; sys_platform == "win32"
+soundfile>=0.13.0

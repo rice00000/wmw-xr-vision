@@ -24,9 +24,7 @@ in the same frame. The subtitle held it until the menu closed. So the child
 
 Saving only happened on task completion and focus loss, so mid-task progress
 could roll back. Start over patched nodes in place and left queued lines, timers,
-debug pins, the vision ability and the open research log behind. The Test Room
-borrowed the child's task slot, so a save during hand-testing could store test
-state as the child's progress.
+facilitator pins, the vision ability and the open research log behind.
 
 ## What was done
 
@@ -41,34 +39,32 @@ state as the child's progress.
 - **Rounds:** `Tasks` counts them off `trial_ended` and ends the step on the last
   one. `TrialRunner` keeps no count: it runs "round *n*", and *n* comes from the
   goal. So probes and the round number survive a reload. The station starts the
-  next round when the child is seated, no round is out, the gap is over and the
-  Narrator is quiet.
+  next round when the child is in its zone, no round is out, the gap is over and
+  the Narrator is quiet. Stations never restrict movement.
 - **Narration** (`core/narrator.gd`, autoload `Narrator`): every line goes
   through one queue and comes out one at a time, in order.
   - The subtitle shows `Narrator.current` and Audio speaks it. Neither keeps a
     queue.
   - A line ends when it has been readable long enough **and** Audio reports the
-    recording or TTS utterance really finished.
+    recording or baked voice really finished.
   - A pause stops the line and restarts it, text and voice together.
   - A line has a *topic*: a newer one replaces a waiting one on the same topic.
     So a stale instruction is never said, and B pressed five times says it once.
   - Menu read-aloud never talks over the guide.
 - **Saves** (`core/profile.gd`, autoload `Profile`): each child has a folder,
   `user://profiles/<id>/`, holding `save.json`, `settings.cfg` and `metrics/`.
-  - **Boot, switching save, Start over and the Test Room are one operation**:
+  - **Boot, switching save and Start over are one operation**:
     `profile_closing` (write, drop everything) → the level is freed → files
     swapped or wiped → `profile_opened` (every saveable loads, with `{}` when its
     file has nothing) → the first level is built fresh.
   - Nothing is patched in place.
   - Start over wipes progress and settings and keeps the research log, which
     marks the reset.
-  - The team picks the save in the debug panel (Next save / New save / Test Room).
+  - The team picks or creates a named save on the Facilitator panel's Saves tab:
+    Start fresh, or Copy this save as a checkpoint (research log not copied).
 - **Saving** needs no asking: `Save` writes after every fact and every round, at
   most once a frame, via a temporary file. A save from another format version
   loads as a fresh start, never half of one.
-- **Test Room:** always opens on its own throwaway profile, however it is asked
-  for (the panel, a door, `--level=testbed`, F6), so hand tests never touch a
-  child's data.
 
 ## Rules from here
 

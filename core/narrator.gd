@@ -10,8 +10,8 @@ extends Node
 ## [b]When a line is over:[/b] when it has been on screen long enough to read
 ## ([member read_pace]) [i]and[/i] the speaker has said it is done. Audio claims a
 ## line it speaks ([method speaking]) and hands it back when the recording or the
-## text-to-speech utterance really ends ([method spoken]). With Audio off, no
-## speech engine, or read-aloud switched off, the reading time alone decides.
+## baked voice really ends ([method spoken]). With Audio off or read-aloud
+## switched off, the reading time alone decides.
 ##
 ## [b]Pause[/b] (the wrist menu, the headset's own menu): the line on show stops,
 ## subtitle and voice together, and starts again from its beginning when the

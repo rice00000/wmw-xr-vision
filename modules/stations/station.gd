@@ -1,7 +1,7 @@
 class_name Station
 extends Node3D
-## A fixed spot where measured training happens: a [Place], a zone you sit down
-## in, a [TrialRunner] with its [Trial], a sign and a beacon. Drop one into any
+## A fixed spot where measured training happens: a [Place], an activity zone,
+## a [TrialRunner] with its [Trial], a sign and a beacon. Drop one into any
 ## level; nothing else has to know it is there.
 ##
 ## [b]Wanted[/b] while the goal ([member Events.goal]) names its trial. Then the
@@ -11,19 +11,15 @@ extends Node3D
 ## count there is. The station keeps no copy of it.
 ##
 ## Rounds run while the child's head is in the zone: once nobody is talking, and
-## a short gap after the last round, the next one starts. Stick walking goes off
-## while they sit (teleport still works), and the station says once per step what
-## the practice is for. Standing up stops after the round in progress (its clock
-## waits); sitting down again carries on. When the goal stops naming the trial
-## (the last round is in, or the task was dropped) the station goes idle, and a
-## round still out is dropped unscored.
-##
-## With [member auto_start] it also runs endless free-play rounds whenever someone
-## sits down and no task wants it (the Test Room, F6 on a level).
+## a short gap after the last round, the next one starts. Movement stays free,
+## and the station says once per step what the practice is for. Leaving the zone
+## pauses the round's clock and hints; returning carries on. When the goal stops
+## naming the trial (the last round is in, or the task was dropped) the station
+## goes idle, and a round still out is dropped unscored.
 ##
 ## Every station reports "entered:<place id>" when a head comes in, idle or not,
 ## so a task step can send the child here without running anything — and again
-## when the goal moves here with the child already sitting, or a step waiting for
+## when the goal moves here with the child already here, or a step waiting for
 ## them to arrive would wait for ever.
 ##
 ## [b]Layers:[/b] stations sit on top of trials (modules/trials/) and talk to
@@ -39,10 +35,6 @@ extends Node3D
 @export var display_name := ""
 ## Trial id this station runs (a file name in res://content/trials/).
 @export var trial_id: StringName = &"search"
-## Run free-play rounds for anyone who sits down, task or no task.
-@export var auto_start := false
-## Switch stick walking off while rounds run here.
-@export var seated := true
 ## Seconds between rounds, so feedback has time to land.
 @export var gap := 1.8
 
@@ -53,7 +45,6 @@ extends Node3D
 @onready var _zone := $Zone/Shape as CollisionShape3D
 
 var _inside := false
-var _walking_off := false
 var _time := 0.0
 ## When the next round may start ([member _time]): a gap after the last one.
 var _next_at := 0.0
@@ -63,9 +54,6 @@ var _introduced := ""
 var _wanted_step := ""
 ## The goal's place last seen, to notice when it moves here.
 var _goal_place: StringName = &""
-## Free-play rounds run here (auto_start only); a task's rounds are on the goal.
-var _free_rounds := 0
-var _free_running := false
 
 
 func _ready() -> void:
@@ -79,10 +67,6 @@ func _ready() -> void:
 	_wanted_step = _wanted_key()
 	_goal_place = Events.goal.place
 	_refresh()
-
-
-func _exit_tree() -> void:
-	_set_walking(true)
 
 
 ## The goal names this station's trial.
@@ -99,11 +83,6 @@ func trial() -> Trial:
 	return runner.trial
 
 
-## Rounds would run here if someone sat down.
-func is_active() -> bool:
-	return is_wanted() or auto_start
-
-
 func _physics_process(delta: float) -> void:
 	_time += delta
 	var inside := _head_inside()
@@ -111,9 +90,9 @@ func _physics_process(delta: float) -> void:
 		_inside = inside
 		if inside:
 			Events.report(&"entered", place_id)
-			_sit()
+			_enter_zone()
 		else:
-			_stand()
+			_leave_zone()
 		_refresh()
 	_tick()
 	if beacon.visible:
@@ -124,34 +103,28 @@ func _physics_process(delta: float) -> void:
 ## Starts what should run next, if anything should: the child is here, rounds
 ## are wanted, none is out, the gap is over and nobody is talking.
 func _tick() -> void:
-	if not _inside or not is_active() or runner.is_running() or _time < _next_at or not Narrator.is_quiet():
+	if not _inside or not is_wanted() or runner.is_running() or _time < _next_at or not Narrator.is_quiet():
 		return
-	if is_wanted() and _introduced != Events.goal.key():
+	if _introduced != Events.goal.key():
 		_introduced = Events.goal.key()
 		var visual_skill := VisualSkillDef.find(_trial_def().visual_skill if _trial_def() else &"")
 		if visual_skill:
 			Narrator.say("%s! %s" % [visual_skill.display_name, visual_skill.description], null, &"station")
 			return # the round waits for it to be heard
-	_free_running = not is_wanted()
-	runner.run(Events.goal.done if is_wanted() else _free_rounds)
+	runner.run(Events.goal.done)
 
 
-func _sit() -> void:
+func _enter_zone() -> void:
 	if runner.trial:
 		runner.trial.hold(false)
-	if is_active() and seated:
-		_set_walking(false)
 
 
-func _stand() -> void:
+func _leave_zone() -> void:
 	if runner.is_running():
 		runner.trial.hold(true) # its clock and hints wait for the child to come back
-	_set_walking(true)
 
 
 func _on_round_ended(_success: bool) -> void:
-	if _free_running:
-		_free_rounds += 1
 	_next_at = _time + gap
 	_refresh()
 
@@ -162,16 +135,15 @@ func _on_goal_changed(goal: Goal) -> void:
 		if not wanted.is_empty() and goal.done == 0:
 			_introduced = "" # a fresh run; loading a partly completed run keeps its introduction
 		_wanted_step = wanted
-		if wanted.is_empty() and not auto_start:
+		if wanted.is_empty():
 			runner.cancel() # the task moved on or was dropped: a round still out is nobody's
-			_set_walking(true)
 		elif _inside:
-			_sit()
+			_enter_zone()
 	_refresh()
 	if goal.place == _goal_place:
 		return
 	_goal_place = goal.place
-	# The goal just moved here and the child is already sitting here: whatever is
+	# The goal just moved here and the child is already here: whatever is
 	# waiting for them to arrive would otherwise wait for an "entered" that never
 	# comes. Deferred, so everyone else hears about the goal first.
 	if goal.place == place_id and _inside:
@@ -203,8 +175,6 @@ func _refresh() -> void:
 	if is_wanted():
 		var left := goal.rounds_left()
 		lines.append("1 more to go" if left == 1 else "%d more to go" % left)
-	elif auto_start:
-		lines.append("Free play")
 	sign_label.text = "\n".join(lines)
 	sign_label.modulate = Color(1.0, 0.95, 0.6) if is_wanted() else Color(0.92, 0.92, 0.95)
 
@@ -226,16 +196,3 @@ func _head_inside() -> bool:
 	# A little give on the way out, so leaning back does not stop the round.
 	var slack := 0.25 if _inside else 0.0
 	return Vector2(local.x, local.z).length() <= radius + slack and absf(local.y) <= height * 0.5 + slack
-
-
-## Duck-typed like [method Level._set_walking]: a rig without a Locomotion node
-## simply has nothing to switch.
-func _set_walking(on: bool) -> void:
-	if on == not _walking_off:
-		return
-	_walking_off = not on
-	if not is_instance_valid(Game.player):
-		return
-	var walking := Game.player.get_node_or_null(^"Locomotion")
-	if walking and &"enabled" in walking:
-		walking.enabled = on

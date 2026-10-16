@@ -23,7 +23,7 @@ extends Trial
 ## creature's own [member Contrast.background_luminance].
 @export var surface: StandardMaterial3D
 ## Eye height above [member anchor] when the child's head is not there (a free-play
-## round started from code, the Test Room).
+## round started from code).
 @export var eye_height := 1.1
 
 @export_group("Guide")
@@ -90,7 +90,7 @@ func _teardown() -> void:
 		_creature.disconnect(&"caught", _on_caught)
 	if _creature.is_connected(&"escaped", _on_escaped):
 		_creature.disconnect(&"escaped", _on_escaped)
-	# Abandoned from the debug menu: nobody caught it and it did not fly off.
+	# Abandoned from the facilitator panel: nobody caught it and it did not fly off.
 	if _creature.has_method(&"is_done") and not _creature.call(&"is_done"):
 		_creature.queue_free()
 	_creature = null

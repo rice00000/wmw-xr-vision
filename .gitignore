@@ -1,5 +1,7 @@
 # Godot 4+ specific ignores
 .godot/
+/content/audio/generated/*.import
+/content/audio/generated/*.wav
 
 # Android build template (installed automatically by tools/quest.ps1 build)
 /android/

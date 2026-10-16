@@ -86,7 +86,7 @@ func finish(success: bool, extra: Dictionary = {}) -> void:
 
 
 ## Drops the round without scoring it: no trial_ended, nothing in the log. For
-## the debug menu, so trying a setting out does not land in the research data.
+## the facilitator panel, so trying a setting out does not land in the research data.
 func abandon() -> void:
 	if not _running:
 		return

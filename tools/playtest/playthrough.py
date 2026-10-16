@@ -1,6 +1,7 @@
 """Drive the real hands/menu through the island and leave PNGs for visual review.
 
-This checks interaction/progression, not human recognition, comfort or Quest performance.
+This unrestricted functional walkthrough checks progression only. The separate
+usability suite uses Actor for body/reach/view constraints and runs after demo.
 State assertions catch failures; screenshots still need to be inspected by a person/agent.
 """
 
@@ -231,7 +232,7 @@ def main():
         capture("15-bag-returned")
         click("menu_tab_tasks")
         capture("16-repeatable-tasks")
-        note("Interaction sequence finished. PNGs require visual review; this is not a visual PASS.")
+        note("Functional sequence finished. Body constraints are checked by usability.py; PNGs require visual review.")
     except Exception as error:
         note("STOPPED: " + str(error))
         capture("failure")

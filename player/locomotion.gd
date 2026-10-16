@@ -2,16 +2,14 @@ extends Node
 ## Smooth movement (left stick) and snap turning (right stick).
 ## Stops at walls. Delete this node for room-scale / teleport-only play.
 ##
-## Three things must all allow stick walking: [member enabled] (the level's seated
-## switch), the child's Settings.move_mode (&"walk"; &"teleport" walks only by
-## teleport) and the world not being paused (wrist menu open). Snap turning follows
+## Stick walking follows Settings.move_mode (&"walk"; &"teleport" moves only by
+## teleport) and stops while the world is paused (wrist menu open). Snap turning follows
 ## Settings.turn_degrees and stops only while paused. Both settings are read live.
 
-@export var enabled := true
 @export var move_speed := 1.5 ## m/s
 @export_range(0.0, 0.9) var deadzone := 0.25
 
-@onready var _origin := get_parent() as XROrigin3D
+@onready var _origin := get_parent() as Player
 @onready var _camera := _origin.get_node(^"Camera") as XRCamera3D
 @onready var _left := _origin.get_node(^"LeftController") as XRController3D
 @onready var _right := _origin.get_node(^"RightController") as XRController3D
@@ -33,7 +31,7 @@ func step(move: Vector2, turn: Vector2, delta: float) -> void:
 
 
 func can_walk() -> bool:
-	return enabled and String(Settings.value(&"move_mode")) == "walk" and not get_tree().paused
+	return String(Settings.value(&"move_mode")) == "walk" and not get_tree().paused
 
 
 func can_turn() -> bool:
@@ -46,7 +44,7 @@ func _move(stick: Vector2, delta: float) -> void:
 	forward.y = 0.0
 	right.y = 0.0
 	var motion := (right.normalized() * stick.x + forward.normalized() * stick.y) * move_speed * delta
-	var knee := Vector3(_camera.global_position.x, _origin.global_position.y + 0.4, _camera.global_position.z)
+	var knee := Vector3(_camera.global_position.x, _origin.floor_y() + 0.4,_camera.global_position.z)
 	var query := PhysicsRayQueryParameters3D.create(knee, knee + motion + motion.normalized() * 0.25)
 	if _origin.get_world_3d().direct_space_state.intersect_ray(query).is_empty():
 		_origin.global_position += motion

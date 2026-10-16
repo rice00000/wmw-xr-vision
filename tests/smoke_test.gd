@@ -8,13 +8,13 @@ extends Node
 ## free play, a save with furniture in the house), hands and placement there,
 ## then a new game on a small island fixture that checks the chain in detail
 ## (measured rounds, the guide round a wall), the menu's picks and a save round
-## trip, Start over and switching players, every module's own check from the
-## Test Room (on its own profile), the menu, the sound table, and the island's map.
+## trip, Start over and switching players, the menu, the sound table, and the
+## island's map.
 
 ## Sections that ran all the way to their last line. A GDScript error aborts the
 ## function it happens in without raising, so without this a crashed section
 ## would simply print fewer lines and still say PASSED.
-const SECTIONS := 10
+const SECTIONS := 9
 ## Where the test fingertip waits between pokes: out of reach of everything.
 const MENU_AWAY := Vector3(0.0, -50.0, 0.0)
 
@@ -33,6 +33,8 @@ func _ready() -> void:
 	# through them: set before the game boots, so the first lines are timed too.
 	Narrator.read_pace = 0.0
 	Narrator.min_seconds = 0.15
+	Audio._guide.pitch_scale = 32.0 # Exercise file completion without waiting through every baked line.
+	Audio._reader.pitch_scale = 32.0
 	add_child(load("res://main.tscn").instantiate())
 	_listen()
 	await _settle()
@@ -42,9 +44,8 @@ func _ready() -> void:
 	await _open_world()
 	await _replay()
 	await _profiles()
-	await _module_checks()
 	await _menu()
-	await _controls_and_debug()
+	await _controls_and_facilitator()
 	await _audio()
 	await _island()
 	_check(_finished == SECTIONS, "every section ran to its end (%d of %d)" % [_finished, SECTIONS])
@@ -164,10 +165,23 @@ func _open_world() -> void:
 	_check(Narrator.current != null and Narrator.current.text == TaskDef.find(&"welcome").completed_text,
 		"the reward line is being said; the next task's first instruction waits its turn")
 	_check(picnic.is_wanted() and _last_place() == &"picnic", "find_it wants the picnic station")
-	_check(not _walking(), "stick walking is off while sitting at a station")
+	_check(_walking(), "entering an active station leaves stick walking available")
+	var walk := Game.player.get_node(^"Locomotion")
+	var at_table := Game.player.global_transform
+	walk.step(Vector2(0.0, -1.0), Vector2.ZERO, 0.1)
+	_check(not Game.player.global_position.is_equal_approx(at_table.origin),
+		"the stick repositions the player before the first pickup")
+	Game.player.global_transform = at_table
 	var trial := picnic.trial() as SearchTrial
 	await _next_round(trial)
 	_check(trial.is_running(), "rounds start with the child already sitting there")
+	Settings.set_value(&"height", 0.1)
+	var raised_at_table := Game.player.global_transform
+	walk.step(Vector2(0.0, -1.0), Vector2.ZERO, 0.1)
+	_check(not Game.player.global_position.is_equal_approx(raised_at_table.origin) and trial.is_running(),
+		"the stick still repositions the player during a round after adjusting height")
+	Game.player.global_transform = raised_at_table
+	Settings.set_value(&"height", 0.0)
 	_check(picnic.sign_label.text.contains("Find It") and picnic.sign_label.text.contains("Trains: Finding things in a mess")
 		and picnic.sign_label.text.contains("5 more to go"), "the sign shows the task, the visual skill and the rounds")
 
@@ -233,7 +247,7 @@ func _open_world() -> void:
 	_check(trial.hint_level == 1, "asking for help raises the hint level")
 	_place_head(picnic.place.global_position + Vector3(0.0, 0.0, 4.0))
 	await _physics(3)
-	_check(_walking() and picnic.beacon.visible, "standing up gives walking back and the beacon shows again")
+	_check(_walking() and picnic.beacon.visible, "leaving the station keeps walking available and shows the beacon again")
 	var clock := trial.seconds()
 	await get_tree().create_timer(0.3).timeout
 	_check(trial.is_held() and is_equal_approx(trial.seconds(), clock) and trial.hint_level == 1,
@@ -539,7 +553,7 @@ func _replay() -> void:
 	var trial := picnic.trial() as SearchTrial
 	Training.pin(&"clutter", 3.0)
 	await _next_round(trial)
-	_check(trial.placed().size() == 3, "a debug pin overrides the axis next round")
+	_check(trial.placed().size() == 3, "a facilitator pin overrides the axis next round")
 	Training.unpin_all()
 	await _pick(trial, trial.target())
 	await _physics(2)
@@ -607,8 +621,8 @@ func _profiles() -> void:
 	Training.pin(&"clutter", 3.0)
 	var level_before := Training.level(&"search")
 	_check(level_before != Training.START_LEVEL, "(and a staircase that has moved)")
-	Narrator.say("A line from the old game.")
-	Narrator.say("Another line from the old game.")
+	Narrator.say("A line from the old game.", Audio.tone(660.0, 30.0))
+	Narrator.say("Another line from the old game.", Audio.tone(660.0, 30.0))
 	var logs_before := _logs(PROFILE)
 
 	# Start over: everything back to new, the research log kept.
@@ -619,12 +633,12 @@ func _profiles() -> void:
 		"Start over begins this player's game again on the island")
 	_check(Inventory.count(STONE) == 0, "with no stones")
 	_check(Training.level(&"search") == Training.START_LEVEL and not Training.is_pinned(&"clutter"),
-		"the staircase is back at its start and no debug pin is left")
+		"the staircase is back at its start and no facilitator pin is left")
 	_check(is_equal_approx(Settings.value(&"volume_master"), 1.0), "the settings are back to their defaults")
 	_check(not _said.slice(_said.find("A line from the old game.") + 1).has("Another line from the old game."),
 		"a line still waiting from the old game is never said in the new one")
 	_check(Events.goal.task == &"welcome" and Events.goal.place == &"dock", "the goal is the welcome's, at the dock")
-	Narrator.say("New line.")
+	Narrator.say("New line.", Audio.tone(660.0, 30.0))
 	_check(_logs(PROFILE).size() >= logs_before.size() and Array(logs_before).all(func(f: String) -> bool: return _logs(PROFILE).has(f)),
 		"the research log is kept: Start over never deletes one")
 	var newest := FileAccess.get_file_as_string(Profile.path("metrics/") + _logs(PROFILE)[-1])
@@ -733,7 +747,7 @@ func _place_head(at: Vector3) -> void:
 
 
 func _walking() -> bool:
-	return Game.player.get_node(^"Locomotion").enabled
+	return Game.player.get_node(^"Locomotion").can_walk()
 
 
 func _in_wall(at: Vector3) -> bool:
@@ -781,10 +795,10 @@ func _hands_and_placement() -> void:
 	var ball := (load("res://content/trials/objects/ball.tscn") as PackedScene).instantiate() as Grabbable
 	level.add_child(ball)
 	ball.global_position = spot
-	var button := (load("res://components/touch_button.tscn") as PackedScene).instantiate() as TouchButton
-	button.id = &"hover_probe"
-	level.add_child(button)
-	button.global_position = spot + Vector3(1.0, 0.0, 0.0)
+	var probe := (load("res://modules/vision/vision_orb.tscn") as PackedScene).instantiate() as VisionOrb
+	probe.id = &"hover_probe"
+	level.add_child(probe)
+	probe.global_position = spot + Vector3(1.0, 0.0, 0.0)
 	var controller := XRController3D.new()
 	var hand := Hand.new()
 	var hand_shape := CollisionShape3D.new()
@@ -795,17 +809,29 @@ func _hands_and_placement() -> void:
 	level.add_child(controller)
 	controller.global_position = spot + Vector3(0.0, 2.0, 0.0)
 	await _physics_frames()
-	_check(not Hover.is_hovered(ball) and not Hover.is_hovered(button), "nothing is lit with no hand near")
+	_check(not Hover.is_hovered(ball) and not Hover.is_hovered(probe), "nothing is lit with no hand near")
 	controller.global_position = ball.global_position + Vector3(0.0, 0.055, 0.0)
 	await _physics_frames()
 	_check(Hover.is_hovered(ball), "a grabbable lights up when a hand can grab it")
-	controller.global_position = button.global_position + Vector3(0.0, 0.0, 0.2) # in reach, not touching
+	controller.global_position = probe.global_position + Vector3(0.0, 0.0, 0.3) # in reach, not touching
 	await _physics_frames()
 	_check(not Hover.is_hovered(ball), "the grabbable goes dark when the hand leaves")
-	_check(Hover.is_hovered(button), "a touchable lights up just before it is touched")
+	_check(Hover.is_hovered(probe), "a touchable lights up just before it is touched")
 	controller.global_position = spot + Vector3(0.0, 2.0, 0.0)
 	await _physics_frames()
-	_check(not Hover.is_hovered(button), "the touchable goes dark when the hand leaves")
+	_check(not Hover.is_hovered(probe), "the touchable goes dark when the hand leaves")
+
+	# Vision: touching a spirit re-grades the world on screen, and switching it
+	# off gives the level its own look back.
+	var orb := level.get_node(^"SpiritOrbs/HighContrast") as VisionOrb
+	var env := level.get_world_3d().environment
+	var world_contrast := env.adjustment_contrast
+	orb.touch(null)
+	_check(Vision.profile == orb.profile and env.adjustment_enabled and not is_equal_approx(env.adjustment_contrast, world_contrast),
+		"touching a spirit orb re-grades the world (contrast %.2f to %.2f)" % [world_contrast, env.adjustment_contrast])
+	Vision.apply(null)
+	_check(Vision.profile == null and is_equal_approx(env.adjustment_contrast, world_contrast),
+		"switching it off gives the level its own look back")
 
 	# Hover layers over a Highlight or Vision outline and never takes it away:
 	# whatever overlay was there is still there, both ways round.
@@ -856,7 +882,7 @@ func _hands_and_placement() -> void:
 	carried.queue_free()
 	controller.queue_free()
 	ball.queue_free()
-	button.queue_free()
+	probe.queue_free()
 	await get_tree().process_frame
 
 	# Feedback: the nearest hand vibrates (scaled by the setting) and a shape
@@ -907,17 +933,19 @@ func _hands_and_placement() -> void:
 	Settings.set_value(&"move_mode", &"walk")
 	walk.step(Vector2(0.0, 1.0), Vector2.ZERO, 0.5)
 	_check(not player.global_position.is_equal_approx(start.origin), "walk mode: the stick walks")
-	walk.enabled = false # a seated station
-	player.global_transform = start
-	walk.step(Vector2(0.0, 1.0), Vector2.ZERO, 0.5)
-	_check(player.global_position.is_equal_approx(start.origin), "seated: the stick does not walk, whatever the setting")
-	walk.enabled = true
 	Settings.set_value(&"turn_degrees", 45.0)
 	walk.step(Vector2.ZERO, Vector2.ZERO, 0.1)
 	walk.step(Vector2.ZERO, Vector2(1.0, 0.0), 0.1)
 	_check(is_equal_approx(rad_to_deg(absf(player.global_rotation.y)), 45.0), "snap turn follows the turn setting")
 	walk.step(Vector2.ZERO, Vector2.ZERO, 0.1)
+	var ground: float = player.floor_y()
+	Settings.set_value(&"height", -0.3)
+	_check(is_equal_approx(player.global_position.y, ground - 0.3) and is_equal_approx(player.floor_y(), ground),
+		"view height lowers the rig live, over the same floor")
+	teleport.teleport_to(start.origin)
+	_check(is_equal_approx(player.global_position.y, start.origin.y - 0.3), "a teleport keeps the view height")
 	Settings.reset()
+	_check(is_equal_approx(player.global_position.y, start.origin.y), "reset puts the view back where the child is")
 	player.global_transform = home
 
 	# Placement: bag -> hand -> floor -> bag, all through the contract.
@@ -939,13 +967,23 @@ func _hands_and_placement() -> void:
 	right.release()
 	_check(facts.has("placed:lamp") and lamp.holder == null, "letting go places it")
 
-	# Put away: pick it up, the other hand touches the button over it.
+	# Put away: lifting furniture must not lift its touch target out of reach.
 	right.hold(lamp)
 	var put_away := layout.get_node(^"PutAwayButton") as PutAwayButton
-	_check(put_away.visible and put_away.global_position.y > lamp.global_position.y,
-		"a put-away button floats over the held item")
+	var button_spot := put_away.global_position
+	_check(put_away.visible and button_spot.y < player.camera.global_position.y
+		and button_spot.distance_to(player.camera.global_position) < 0.6,
+		"the put-away button appears below the eyes and within reach")
+	right.get_parent().position.y += 0.5
+	await _physics_frames()
+	_check(put_away.global_position.is_equal_approx(button_spot),
+		"raising the holding hand leaves the put-away target in place")
 	_check(not put_away.touch(right), "the hand holding it cannot press its button by accident")
-	_check(put_away.touch(left), "the other hand can")
+	left.get_parent().global_position = button_spot
+	await _physics_frames()
+	_check(right.held == null, "the other hand puts it away through physical overlap")
+	left.get_parent().position = left_rest
+	right.get_parent().position = right_rest
 	_check(Inventory.count(&"lamp") == 2 and facts.has("put_away:lamp"), "putting it away is +1 in the bag, reported")
 	_check(right.held == null and facts.count("placed:lamp") == 1, "put away lets go of it without placing it")
 	await get_tree().create_timer(0.4).timeout
@@ -1124,11 +1162,11 @@ func _audio() -> void:
 	Narrator.say("A line with a clip.", Audio.tone(440.0, 60.0))
 	_check(Audio.spoken == before + 1, "a Narrator line with a recording reaches the guide's voice")
 	await Narrator.wait_quiet()
-	Narrator.say("A line nobody has recorded yet.")
-	_check(Audio.speech[Audio.speech.size() - 1] == "say: A line nobody has recorded yet.",
-		"a line with no recording goes to text-to-speech")
+	Narrator.say("Follow me to the picnic table!")
+	_check(Audio.speech[Audio.speech.size() - 1] == "say: Follow me to the picnic table!",
+		"a line with no recording goes to baked speech")
 	Events.read_aloud.emit("Shop page")
-	_check(Audio.speech[Audio.speech.size() - 1] == "say: A line nobody has recorded yet.",
+	_check(Audio.speech[Audio.speech.size() - 1] == "say: Follow me to the picnic table!",
 		"reading a button aloud never talks over the guide")
 	before = Audio.cued
 	Events.play_at(Audio.tone(880.0, 60.0), Vector3.ZERO)
@@ -1145,9 +1183,9 @@ func _audio() -> void:
 			owners.append(path)
 	_check(owners.is_empty(), "only the audio module owns an audio node%s"
 		% ("" if owners.is_empty() else ": %s" % ", ".join(owners)))
-	var button_source := FileAccess.get_file_as_string("res://components/touch_button.gd")
-	_check(not button_source.contains("AudioStream") and not button_source.contains("Audio."),
-		"touch_button.gd calls nothing in the audio module, yet every button is heard")
+	var orb_source := FileAccess.get_file_as_string("res://modules/vision/vision_orb.gd")
+	_check(not orb_source.contains("AudioStream") and not orb_source.contains("Audio."),
+		"vision_orb.gd calls nothing in the audio module, yet every touch is heard")
 
 	# Every fact the contract names is answered, whether or not this run happened
 	# to report it, so a new kind of moment cannot ship silent by accident.
@@ -1183,39 +1221,6 @@ func _audio() -> void:
 	_check(Audio.unmapped.is_empty(),
 		"every fact the whole playthrough reported has a row or is silenced%s"
 		% ("" if Audio.unmapped.is_empty() else ": %s" % ", ".join(PackedStringArray(Audio.unmapped.keys()))))
-	_finished += 1
-
-
-## Every module's own station in the Test Room, run with nobody in the headset.
-## These are the same check objects the room shows, so a green suite and a green
-## board can never disagree — and a module that breaks is named, not just
-## counted.
-func _module_checks() -> void:
-	var stones := Inventory.count(STONE)
-	var done := Tasks.times_done(&"welcome")
-	await _go(Profile.TESTBED)
-	await _settle() # the profile is swapped on the way: one more fade
-	_check(Profile.is_test_room() and Game.level.level_id == &"testbed",
-		"asking for the Test Room opens it on its own profile")
-	_check(Inventory.count(STONE) == 0 and Tasks.times_done(&"welcome") == 0,
-		"the Test Room starts empty, whoever was playing")
-	var board := Game.level.get_node(^"Board") as CheckBoard
-	var stations := board.stations()
-	_check(stations.size() == 13, "the Test Room has a station for every module (%d)" % stations.size())
-	for station: ModuleCheck in stations:
-		_check(not station.checks.is_empty() and not station.action.is_empty()
-			and not station.pass_when.is_empty(),
-			"%s: the sign says what it checks, what to do and what a pass is" % station.title)
-	await board.run_all()
-	await get_tree().create_timer(2.0).timeout # stations with a deadline of their own
-	for station: ModuleCheck in stations:
-		_check(station.verdict == ModuleCheck.Verdict.PASS,
-			"%s: %s [%s]" % [station.title, station.pass_when, station.note])
-	Profile.switch(PROFILE)
-	await _settle()
-	await _settle()
-	_check(Profile.id == PROFILE and Inventory.count(STONE) == stones and Tasks.times_done(&"welcome") == done,
-		"leaving the Test Room gives the player back untouched by the hand tests (%d stones)" % Inventory.count(STONE))
 	_finished += 1
 
 
@@ -1300,8 +1305,8 @@ func _menu() -> void:
 	subtitle.set_script(load("res://player/subtitle.gd"))
 	add_child(subtitle)
 	Settings.set_value(&"subtitles", true)
-	Narrator.say("First line.")
-	Narrator.say("Next line.")
+	Narrator.say("First line.", Audio.tone(660.0, 30.0))
+	Narrator.say("Next line.", Audio.tone(660.0, 30.0))
 	await get_tree().create_timer(0.4).timeout
 	_check(Narrator.current == null and not subtitle.visible,
 		"lines said while the menu is open are neither shown nor heard until it closes")
@@ -1568,11 +1573,11 @@ func _aim_menu(tracker: XRControllerTracker, target: Vector3, origin := Vector3.
 
 
 ## Exercise controller signals, both chord orders and native UI clicks.
-func _controls_and_debug() -> void:
+func _controls_and_facilitator() -> void:
 	var menu := Game.module(&"Menu")
-	var debug := Game.module(&"Debug")
+	var facilitator := Game.module(&"Facilitator")
 	menu.close()
-	debug.close()
+	facilitator.close()
 	var controllers := [Game.player.get_node(^"LeftController"), Game.player.get_node(^"RightController")]
 	var previous := [controllers[0].tracker, controllers[1].tracker]
 	var trackers: Array[XRControllerTracker] = []
@@ -1597,10 +1602,10 @@ func _controls_and_debug() -> void:
 
 	left.set_input(&"menu_button", true)
 	await _frames(3)
-	_check(not menu.is_open and not debug.is_open, "Menu down opens neither panel")
+	_check(not menu.is_open and not facilitator.is_open, "Menu down opens neither panel")
 	left.set_input(&"menu_button", false)
 	await _frames(3)
-	_check(menu.is_open and not debug.is_open, "Menu release opens the ordinary menu")
+	_check(menu.is_open and not facilitator.is_open, "Menu release opens the ordinary menu")
 	left.set_input(&"menu_button", true)
 	await _frames(3)
 	_check(menu.is_open, "holding Menu leaves the current panel alone")
@@ -1616,19 +1621,19 @@ func _controls_and_debug() -> void:
 			var second := &"menu_button" if press_y_first else &"by_button"
 			left.set_input(first, true)
 			await _frames(3)
-			_check(not debug.is_open and not facts.has("asked:help"), "the first chord key waits for its partner or release")
+			_check(not facilitator.is_open and not facts.has("asked:help"), "the first chord key waits for its partner or release")
 			left.set_input(second, true)
 			await _frames(6)
-			_check(debug.is_open and not menu.is_open and facts.count("asked:debug") == 1,
-				"overlapping Menu/Y opens Debug once (Y first: %s)" % press_y_first)
-			_check(get_tree().paused and not menu.star().is_visible_in_tree(), "Debug pauses play and hides the wrist")
+			_check(facilitator.is_open and not menu.is_open and facts.count("asked:facilitator") == 1,
+				"overlapping Menu/Y opens Facilitator once (Y first: %s)" % press_y_first)
+			_check(get_tree().paused and not menu.star().is_visible_in_tree(), "Facilitator pauses play and hides the wrist")
 			left.set_input(&"by_button" if release_y_first else &"menu_button", false)
 			await _frames(3)
 			left.set_input(&"menu_button" if release_y_first else &"by_button", false)
 			await _frames(3)
-			_check(debug.is_open and not menu.is_open and not facts.has("asked:menu") and not facts.has("asked:help"),
+			_check(facilitator.is_open and not menu.is_open and not facts.has("asked:menu") and not facts.has("asked:help"),
 				"either chord release order suppresses ordinary menu and help")
-			debug.close()
+			facilitator.close()
 
 	facts.clear()
 	left.set_input(&"by_button", true)
@@ -1643,7 +1648,7 @@ func _controls_and_debug() -> void:
 	right.set_input(&"by_button", false)
 	await _frames(3)
 
-	# A second Y press in the same held Menu gesture cannot retrigger Debug.
+	# A second Y press in the same held Menu gesture cannot retrigger Facilitator.
 	left.set_input(&"menu_button", true)
 	left.set_input(&"by_button", true)
 	await _frames(3)
@@ -1651,35 +1656,63 @@ func _controls_and_debug() -> void:
 	await _frames(3)
 	left.set_input(&"by_button", true)
 	await _frames(3)
-	_check(debug.is_open, "a consumed chord cannot toggle twice until both keys are up")
+	_check(facilitator.is_open, "a consumed chord cannot toggle twice until both keys are up")
 	left.set_input(&"menu_button", false)
 	left.set_input(&"by_button", false)
 	await _frames(3)
 
-	var panel := Game.player.get_node(^"DebugPanel") as ViewportUI
-	_check(panel.content is PanelContainer and panel.find_children("*", "TouchButton", true, false).is_empty(),
-		"Debug is a Control UI with no old touch buttons")
-	await _click_control(left, panel, &"dbg_saves")
+	var panel := Game.player.get_node(^"FacilitatorPanel") as ViewportUI
+	_check(panel.content is PanelContainer, "Facilitator is a Control UI")
+	await _click_control(left, panel, &"fac_saves")
 	_check(panel.content.find_child("Saves", true, false).visible, "left ray clicks the native Saves tab while paused")
-	await _click_control(right, panel, &"dbg_training")
+	await _click_control(left, panel, &"fac_new_save")
+	for key in [&"fac_key_M", &"fac_key_I", &"fac_key_A", &"fac_space", &"fac_erase"]:
+		await _click_control(right, panel, key)
+	_check(panel.content.find_child("Naming", true, false).visible
+		and (panel.content.find_child("Name", true, false) as Label).text == "Name: MIA_",
+		"New save names a save with the panel keyboard")
+	await _click_control(right, panel, &"fac_cancel")
+	_check(panel.content.find_child("Saves", true, false).visible, "Cancel goes back to the save list")
+	# Copy this save adds to the headset's real save list, so that is put back after.
+	var index := FileAccess.get_file_as_string(Profile.INDEX)
+	var count := Profile.saves().size()
+	await _click_control(left, panel, &"fac_new_save")
+	for key in [&"fac_key_M", &"fac_key_I", &"fac_key_A"]:
+		await _click_control(right, panel, key)
+	await _click_control(right, panel, &"fac_copy")
+	var copy: StringName = Profile.saves().back()
+	var folder := "%s%s/" % [Profile.ROOT, copy]
+	_check(Profile.saves().size() == count + 1 and Profile.label(copy) == "MIA" and Profile.id == PROFILE
+		and panel.content.find_child("Saves", true, false).visible and panel.content.find_child("fac_slot_" + copy, true, false),
+		"Copy this save adds a named slot and play carries on in this save")
+	_check(FileAccess.get_file_as_string(folder + Profile.SAVE_FILE) == FileAccess.get_file_as_string(Profile.path(Profile.SAVE_FILE))
+		and not DirAccess.dir_exists_absolute(folder + "metrics"), "the copy holds this save's progress and no research log")
+	for file in [Profile.SAVE_FILE, Profile.SETTINGS_FILE]:
+		DirAccess.remove_absolute(folder + file)
+	DirAccess.remove_absolute(folder)
+	if index.is_empty():
+		DirAccess.remove_absolute(Profile.INDEX)
+	else:
+		FileAccess.open(Profile.INDEX, FileAccess.WRITE).store_string(index)
+	await _click_control(right, panel, &"fac_training")
 	_check(panel.content.find_child("Training", true, false).visible, "right ray clicks the native Training tab")
 	Training.unpin_all()
 	Events.trial_started.emit(&"search", Training.condition(&"search").to_log())
 	await _frames(4)
 	var before: float = Training.condition(&"search").value(&"overlap")
-	await _click_control(right, panel, &"dbg_overlap_up")
-	await _click_control(right, panel, &"dbg_overlap_up")
+	await _click_control(right, panel, &"fac_overlap_up")
+	await _click_control(right, panel, &"fac_overlap_up")
 	_check(Training.is_pinned(&"overlap") and is_equal_approx(Training.condition(&"search").value(&"overlap"), before + 0.1),
 		"two UI nudges accumulate against the next round's pinned value")
-	await _click_control(left, panel, &"dbg_auto")
+	await _click_control(left, panel, &"fac_auto")
 	_check(not Training.is_pinned(&"overlap"), "the UI clears difficulty pins")
 	Game.hold_pause(&"headset", true)
-	await _click_control(right, panel, &"dbg_close")
-	_check(not debug.is_open and get_tree().paused, "closing Debug leaves the headset's pause in place")
+	await _click_control(right, panel, &"fac_close")
+	_check(not facilitator.is_open and get_tree().paused, "closing Facilitator leaves the headset's pause in place")
 	Game.hold_pause(&"headset", false)
 	_check(not get_tree().paused and menu.star().is_visible_in_tree(), "closing the last panel restores play and the wrist")
 
-	# The same chord closes Debug, and its Menu release cannot reopen anything.
+	# The same chord closes Facilitator, and its Menu release cannot reopen anything.
 	for _i in 2:
 		left.set_input(&"menu_button", true)
 		left.set_input(&"by_button", true)
@@ -1687,7 +1720,7 @@ func _controls_and_debug() -> void:
 		left.set_input(&"by_button", false)
 		left.set_input(&"menu_button", false)
 		await _frames(3)
-	_check(not debug.is_open and not menu.is_open and not get_tree().paused, "the closing chord leaves both panels closed")
+	_check(not facilitator.is_open and not menu.is_open and not get_tree().paused, "the closing chord leaves both panels closed")
 	Events.reported.disconnect(on_fact)
 	for i in 2:
 		controllers[i].tracker = previous[i]

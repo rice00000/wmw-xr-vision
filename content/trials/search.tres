@@ -37,12 +37,12 @@ Driven axis: overlap, and only overlap. Ostrovsky 2009 [2] found newly sighted
 people could not separate still, overlapping objects, which makes occlusion the
 variable worth adapting. Clutter count and contrast stay pinned so a failed round
 is attributable to one thing; raise their fixed values by hand (or pin them from
-the debug menu) to test a different point in the space.
+the facilitator panel) to test a different point in the space.
 
 contrast is Weber contrast against the surface the objects sit on:
 c = (L_background - L_target) / L_background, target darker, measured on the
 linear luminance of the albedo. Contrast.background_luminance must match the
-table material (0.34 for shared/materials/floor.tres). Set it per surface.
+table material (0.34 for content/materials/floor.tres). Set it per surface.
 
 clutter is capped by the number of distinct object scenes in the SearchTrial,
 since each is placed at most once (naming one object needs exactly one of it).

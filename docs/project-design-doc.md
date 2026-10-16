@@ -52,7 +52,7 @@ We hope to explore one perception skill, finding objects in clutter, for our fir
 - **Difficulty steps:** more objects nearby, more overlap, lower contrast, less motion.  
 - **Help:** the guide gives voice instructions and can make the target move or highlight it. Help fades over rounds.  
 - **Feedback:** after each pick, the chosen object lifts out so its edges are clear.  
-- **Adaptive difficulty:** levels set by hand through a debug menu at first; automatic staircase later.  
+- **Adaptive difficulty:** levels set by hand through the facilitator panel at first; automatic staircase later.  
 - **Logging:** time, tries, and help used for every round.  
 - **Not in the first build:** story theme, rewards and unlocks, multiple rooms, other vision skills, standing and walking.  
 - **Open:** the theme, which objects to use, how many difficulty steps.
@@ -64,14 +64,14 @@ User Experience
    1. **Correct pick:** the object glows green and lifts out so its edges are clear; the guide responds by voice.  
    2. **Wrong pick:** soft red glow and a gentle sound; the guide encourages another try.  
    3. Feedback is always paired across sight and sound, never colour alone.  
-3. **Interface:** audio first, since some children may not read well yet. Instructions come from the guide's voice; controls are built into the world rather than floating menus. A hidden debug menu lets the team set difficulty.
+3. **Interface:** audio first, since some children may not read well yet. Instructions come from the guide's voice; controls are built into the world rather than floating menus. A hidden facilitator panel lets the team set difficulty and pick the save.
 
 Essential Components
 
 - **Player and hands:** grabbing, turning, moving. Godot \+ XR Tools.  
 - **Room and objects:** the scene and a spawner that places objects at the current difficulty. Godot physics \+ our placement logic.  
 - **Task manager (hub):** picks the target, checks the pick, ends the round. Custom.  
-- **Difficulty adapter:** sets clutter, overlap, contrast and motion each round. Debug menu first, then staircase. Custom.  
+- **Difficulty adapter:** sets clutter, overlap, contrast and motion each round. Facilitator panel first, then staircase. Custom.  
 - **Help system:** guide hints, target motion or highlight, fading over rounds. Custom, using Godot shaders.  
 - **Feedback:** glow, lift-out, sounds. Godot audio and shaders.  
 - **Guide audio:** recorded voice lines triggered by the task manager. Godot audio; we record the lines.  
@@ -108,7 +108,7 @@ Everyone contributes across areas, with one lead per area:
 
 - **Oct 14–16:** design doc revision 1 and design review slides. After Aubrey's review, decide the first scene (house).  
 - **Week 1 (by Oct 23), prototype 1:**  
-  - Must have: first scene as a gray box room with placeholder objects, grabbing, one search task, green/red feedback, debug difficulty menu, basic logging.  
+  - Must have: first scene as a gray box room with placeholder objects, grabbing, one search task, green/red feedback, facilitator difficulty panel, basic logging.  
   - Megan: mood boards and kettle asset. Wanchen: storyboard and task research. Wei: core build.  
   - Stretch: small outdoor area with the butterfly.  
 - **Week 2 (by Oct 30), minimum demo:** polish the scene, swap placeholders for real assets, record guide lines, add fading help, first team playtests. Reach out to Professor Sinha with the demo.  

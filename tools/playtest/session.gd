@@ -17,6 +17,8 @@ var _out := ""
 var _log: FileAccess
 var _recent: Array = []
 var _fixture: Node3D
+var _journey := false
+var _event_sequence := 0
 
 
 func _ready() -> void:
@@ -36,6 +38,8 @@ func _ready() -> void:
 			_out = arg.trim_prefix("--out=")
 		elif arg == "--fixture=interaction":
 			interaction_fixture = true
+		elif arg == "--journey":
+			_journey = true
 	seed(20261015)
 	# These synthetic controllers have no physical vibration motor. This setting
 	# is isolated by the playtest profile, just like the game's smoke test.
@@ -139,6 +143,29 @@ func _dispatch(request: Variant) -> void:
 
 func _execute(cmd: Dictionary) -> Dictionary:
 	match cmd.get("op", "state"):
+		"journey_setup":
+			if not _journey or _fixture != null:
+				return {ok = false, error = "Requires --journey on the real island"}
+			# Test setup only: reset the isolated profile and shorten presentation waits.
+			Narrator.read_pace = 0.0
+			Narrator.min_seconds = 0.02
+			Audio._guide.pitch_scale = 32.0
+			Audio._reader.pitch_scale = 32.0
+			Profile.start_over()
+			while Game.is_changing():
+				await get_tree().process_frame
+			_attach()
+			(Game.player.get_node(^"Camera") as Node3D).position = Vector3(0, cmd.eye_height, 0)
+			for station: Node in Game.level.find_children("*", "Node", true, false):
+				if station is Station:
+					station.gap = 0.03
+				if station is Scatter:
+					station.random_seed = 20261015
+			for side in ["left", "right"]:
+				_pose(side, Game.player.global_transform * Transform3D(Basis.IDENTITY,
+					Vector3(-0.22 if side == "left" else 0.22, cmd.eye_height - 0.30, -0.20)))
+			await _wait(0.06)
+			return {ok = true, observation = _observe([])}
 		"observe":
 			return {ok = true, observation = _observe(cmd.get("targets", []))}
 		"probe":
@@ -149,9 +176,24 @@ func _execute(cmd: Dictionary) -> Dictionary:
 			var orientation := _controller(side).global_basis
 			if cmd.has("rotation"):
 				orientation = Basis.from_euler(_vector(cmd.rotation) * PI / 180.0)
+			if cmd.has("aim_at"):
+				orientation = Basis.looking_at(_vector(cmd.aim_at) - _vector(cmd.position))
 			var samples := await _move(side, Transform3D(orientation, _vector(cmd.position)),
-				float(cmd.seconds), true, cmd.get("targets", []))
+				float(cmd.seconds), true, cmd.get("targets", []), cmd.get("guard", {}))
 			return {ok = true, observation = _observe(cmd.get("targets", [])), samples = samples}
+		"tracked_stick":
+			var side: String = cmd.hand
+			var samples: Array = []
+			_trackers[side].set_input(&"primary", Vector2(cmd.axis[0], cmd.axis[1]).limit_length())
+			var frames := clampi(int(cmd.get("frames", 3)), 2, 120)
+			for i in frames:
+				await get_tree().physics_frame
+				samples.append(_observe([]))
+			_trackers[side].set_input(&"primary", Vector2.ZERO)
+			for i in 3:
+				await get_tree().physics_frame
+				samples.append(_observe([]))
+			return {ok = true, samples = samples, observation = _observe([])}
 		"head":
 			(Game.player.get_node(^"Camera") as Node3D).rotation_degrees = _vector(cmd.rotation)
 			await _wait(0.06)
@@ -211,7 +253,7 @@ func _execute(cmd: Dictionary) -> Dictionary:
 			var basis := Basis.IDENTITY
 			var face := node.global_position
 			await _move(side, Transform3D(basis, face + basis.z * 0.16), 0.35)
-			await _wait(0.12)
+			await _wait(float(cmd.get("seconds", 0.12)))
 			await _move(side, Transform3D(basis, face + basis.z * 0.06), 0.25)
 			await _wait(0.1)
 			await _move(side, Transform3D(basis, face + basis.z * 0.23), 0.3)
@@ -220,7 +262,7 @@ func _execute(cmd: Dictionary) -> Dictionary:
 			if not _trackers.has(side) or cmd.get("action", "") not in ["grip_click", "trigger_click", "by_button", "menu_button", "ax_button"]:
 				return {ok = false, error = "Unknown hand or button"}
 			_trackers[side].set_input(StringName(cmd.action), bool(cmd.get("pressed", true)))
-			await _wait(0.12)
+			await _wait(float(cmd.get("seconds", 0.12)))
 		"stick":
 			var side: String = cmd.get("hand", "left")
 			if not _trackers.has(side):
@@ -279,7 +321,7 @@ func _controller(side: String) -> XRController3D:
 	return Game.player.get_node("%sController" % side.capitalize())
 
 
-func _move(side: String, end: Transform3D, seconds: float, record := false, targets: Array = []) -> Array:
+func _move(side: String, end: Transform3D, seconds: float, record := false, targets: Array = [], guard: Dictionary = {}) -> Array:
 	seconds = clampf(seconds, 0.02, 30.0)
 	var samples: Array = []
 	var start := _controller(side).global_transform
@@ -287,11 +329,25 @@ func _move(side: String, end: Transform3D, seconds: float, record := false, targ
 	var elapsed := 0.0
 	while elapsed < seconds:
 		var at := start.interpolate_with(end, minf(elapsed / seconds, 1.0))
+		if not guard.is_empty():
+			var hand := _controller(side).get_node(^"Hand") as Hand
+			var check := Observation.sweep(hand, [Observation.vector(hand.global_position), Observation.vector(at.origin)],
+				guard.radius, _resolve(guard.get("contact", "")))
+			if not check.clear:
+				samples.append({blocked = check})
+				return samples
 		_pose(side, at)
-		await get_tree().process_frame
+		await get_tree().physics_frame
 		if record:
 			samples.append(_observe(targets))
 		elapsed = (Time.get_ticks_msec() - begin) / 1000.0
+	if not guard.is_empty():
+		var hand := _controller(side).get_node(^"Hand") as Hand
+		var check := Observation.sweep(hand, [Observation.vector(hand.global_position), Observation.vector(end.origin)],
+			guard.radius, _resolve(guard.get("contact", "")))
+		if not check.clear:
+			samples.append({blocked = check})
+			return samples
 	_pose(side, end)
 	await _wait(0.06) # allow collision overlaps to reach the existing Hand
 	if record:
@@ -386,7 +442,7 @@ func _snapshot() -> Dictionary:
 	return {pid = OS.get_process_id(), task = Tasks.current(), goal = Events.goal.text, waiting_for = Events.goal.waiting_for,
 		menu_open = Menu.is_open, facilitator_open = Facilitator.is_open, menu_page = Menu.page, paused = get_tree().paused,
 		inventory = Inventory.all(), hands = hands, places = places, objects = objects,
-		buttons = buttons, trials = trials, recent = _recent.duplicate(),
+		buttons = buttons, trials = trials, recent = _recent.duplicate(), event_sequence = _event_sequence,
 		eye = _json(Game.player.get_node("Camera").global_position), profile = Profile.id}
 
 
@@ -409,7 +465,8 @@ func _json(value: Variant) -> Variant:
 
 
 func _event(kind: String, data: Dictionary) -> void:
-	var entry := {ms = Time.get_ticks_msec(), kind = kind, data = data}
+	_event_sequence += 1
+	var entry := {ms = Time.get_ticks_msec(), sequence = _event_sequence, kind = kind, data = data}
 	if kind in ["fact", "instruction", "trial"]:
 		_recent.append(entry)
 		if _recent.size() > 15:

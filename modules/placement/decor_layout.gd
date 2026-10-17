@@ -5,10 +5,10 @@ extends Node3D
 ## modules/placement/decor_layout.tscn once in the level, at the level's origin.
 ##
 ## In: Events.place_requested(id) from the wrist menu's bag page. One [code]id[/code]
-## leaves the Inventory and its ItemDef.scene appears straight in the child's free
-## hand (or floating 0.4 m in front of them at hand height when both hands are
-## full); reports "taken_out:<id>". Letting go settles it upright (Placeable,
-## "placed:<id>").
+## leaves the Inventory and its ItemDef.scene (a Placeable) appears in the child's
+## free hand, near side first, square to the world, standing on what is below
+## (or floating 0.4 m in front of them at hand height when both hands are full);
+## reports "taken_out:<id>". Letting go leaves it standing ("placed:<id>").
 ##
 ## Out: while a hand holds one of these items, a "put away" button waits within
 ## reach in front of the player. Touching it with the other hand puts it back: +1 in the
@@ -72,13 +72,13 @@ func take_out(item_id: StringName) -> Node3D:
 	var node := spawn(item_id, global_transform)
 	var hand := _free_hand()
 	var bounds := _local_bounds(node)
-	var yaw := Basis(Vector3.UP, _player_yaw())
+	var turn := Basis(Vector3.UP, snappedf(_player_yaw(), Placeable.TURN_STEP))
 	if hand and node is Grabbable:
-		var spot := Transform3D(yaw, hand.global_position)
-		node.global_transform = spot.translated_local(-bounds.get_center())
+		var near := Vector3(bounds.get_center().x, bounds.get_center().y, bounds.end.z) # the side facing the child
+		node.global_transform = Transform3D(turn, hand.global_position).translated_local(-near)
 		hand.hold(node)
 	else:
-		node.global_transform = Transform3D(yaw, _front_spot()).translated_local(-bounds.get_center())
+		node.global_transform = Transform3D(turn, _front_spot()).translated_local(-bounds.get_center())
 	Events.report(&"taken_out", item_id, {position = node.global_position})
 	return node
 
@@ -93,7 +93,7 @@ func put_away(node: Node3D) -> void:
 	if body:
 		if body.holder and body.holder.get(&"held") == body:
 			body.holder.set(&"held", null) # let go without "placed"
-		body.holder = null
+		body.holder = self # the bag has it now: no hand can take it while it shrinks
 		body.freeze = true
 		body.collision_layer = 0
 	_button.show_for(_still_held(node))
@@ -110,14 +110,12 @@ func _on_place_requested(item_id: StringName) -> void:
 	take_out(item_id)
 
 
-## [id, transform local to the layout, held]. An item still in a hand when the
-## game saves (focus lost, quit) is marked, and stands itself on the floor when
-## it is loaded rather than hanging in the air where the hand was.
+## [id, transform local to the layout]. Furniture in a hand already stands
+## where it would be let go, so a save mid-carry needs nothing more.
 func save_state() -> Dictionary:
 	var saved: Array = []
 	for node in items():
-		var held: bool = node is Grabbable and (node as Grabbable).holder != null
-		saved.append([node.get_meta(META), node.transform, held]) # direct children: already local
+		saved.append([node.get_meta(META), node.transform]) # direct children: already local
 	return {items = saved}
 
 
@@ -127,10 +125,7 @@ func load_state(data: Dictionary) -> void:
 		node.queue_free()
 	_button.show_for(null)
 	for entry: Array in data.get("items", []):
-		var local: Transform3D = entry[1]
-		var node := spawn(entry[0], global_transform * local)
-		if node and entry.size() > 2 and entry[2]:
-			_settle.call_deferred(node)
+		spawn(entry[0], global_transform * (entry[1] as Transform3D))
 
 
 ## The button belongs to whatever is still in a hand once [param node] is let go.
@@ -145,14 +140,6 @@ func _still_held(except: Node3D) -> Node3D:
 		if node != except and node is Grabbable and (node as Grabbable).holder != null:
 			return node
 	return null
-
-
-func _settle(node: Node3D) -> void:
-	if not is_instance_valid(node):
-		return
-	for child in node.get_children():
-		if child is Placeable:
-			child.settle()
 
 
 ## An empty hand of the player's, the right one first.

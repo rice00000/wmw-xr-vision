@@ -144,17 +144,25 @@ class Body:
         local = tuple(dot(forward, axis) for axis in self.basis)
         yaw = math.degrees(math.atan2(local[0], -local[2]))
         pitch = math.degrees(math.atan2(local[1], math.hypot(local[0], local[2])))
-        require(abs(yaw) <= self.limits.max_head_yaw, "head_yaw", degrees=yaw)
-        require(abs(pitch) <= self.limits.max_head_pitch, "head_pitch", degrees=pitch)
+        require(abs(yaw) <= self.limits.max_head_yaw + 1e-4, "head_yaw", degrees=yaw)
+        require(abs(pitch) <= self.limits.max_head_pitch + 1e-4, "head_pitch", degrees=pitch)
         for side, hand in pose["hands"].items():
             require(self.limits.hand_radius + 1e-6 >= hand["radius"], "hand_radius_underestimated",
                     configured=self.limits.hand_radius, actual=hand["radius"])
             self.hand(side, hand["position"])
+        self.hand_clearance(pose["hands"]["left"]["position"],
+                            pose["hands"]["right"]["position"])
 
-    def target(self, pose, target, side, whole_visual=True):
+    def hand_clearance(self, point, other):
+        clearance = distance(point, other)
+        require(clearance + 1e-6 >= 2 * self.limits.hand_radius, "hands_overlap",
+                clearance=clearance, minimum=2 * self.limits.hand_radius)
+
+    def target(self, pose, target, side, whole_visual=True, reachable=True):
         require(target["visible"], "hidden", target=target["path"])
         require(side in target["allowed_hands"], "wrong_hand", hand=side, target=target["path"])
-        self.reach(side, self.contact(side, target))
+        if reachable:
+            self.reach(side, self.contact(side, target))
         relative = sub(target["point"], pose["eye"])
         x, y, z = (dot(relative, axis) for axis in pose["eye_basis"])
         require(z < 0, "behind_view", target=target["path"])
@@ -191,7 +199,14 @@ class Body:
         approach = target.get("approach") or unit(sub(self.shoulder(side), target["point"]))
         return add(target["point"], mul(approach, overlap))
 
-    def path(self, side, start, end):
+    def path(self, side, start, end, other_hand=None):
+        if other_hand is not None:
+            # Closest point on the whole segment catches collisions between samples.
+            # Actor moves one hand at a time, so the other hand stays stationary.
+            motion = sub(end, start)
+            squared = dot(motion, motion)
+            t = max(0, min(1, dot(sub(other_hand, start), motion) / squared)) if squared else 0
+            self.hand_clearance(add(start, mul(motion, t)), other_hand)
         steps = max(1, math.ceil(distance(start, end) / self.limits.path_step))
         points = [add(start, mul(sub(end, start), i / steps)) for i in range(steps + 1)]
         for point in points:

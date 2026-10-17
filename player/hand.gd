@@ -35,7 +35,6 @@ var last_pulse := 0.0
 
 @onready var _controller := get_parent() as XRController3D
 
-var _offset := Transform3D.IDENTITY
 var _velocity := Vector3.ZERO
 var _last_position := Vector3.ZERO
 var _reach: Area3D
@@ -72,7 +71,8 @@ func grab() -> void:
 		pulse()
 
 
-## Takes [param body] into this hand where it is, as if it had just been grabbed.
+## Takes [param body] into this hand where it is, as if it had just been grabbed,
+## and straight into the pose it is carried in (furniture stands at once).
 ## Used by grab() and by things that hand the child an object (placement).
 func hold(body: Grabbable) -> bool:
 	if held or body == null or body.holder:
@@ -80,11 +80,12 @@ func hold(body: Grabbable) -> bool:
 	# The grabbed callbacks may release or hand off the object immediately.
 	# Finish the hand's state before the body announces the grab.
 	held = body
-	_offset = global_transform.affine_inverse() * body.global_transform
-	_last_position = body.global_position
 	_velocity = Vector3.ZERO
 	_set_hover([])
 	body.grab(self)
+	if held == body:
+		body.carry(global_transform)
+	_last_position = body.global_position
 	return true
 
 
@@ -138,7 +139,7 @@ func _physics_process(delta: float) -> void:
 		_was_paused = false
 		_update_hover()
 		return
-	held.global_transform = global_transform * _offset
+	held.carry(global_transform)
 	if _was_paused: # the hand moved while the world stood still: that is not a throw
 		_was_paused = false
 		_velocity = Vector3.ZERO
@@ -204,10 +205,22 @@ func _on_button_released(action: String) -> void:
 			release()
 
 
+## The nearest free grabbable this hand touches; failing that, the nearest whose
+## handle (an Area3D child) it is in.
 func _nearest_grabbable() -> Grabbable:
+	var touched := _nearest_free(get_overlapping_bodies())
+	if touched:
+		return touched
+	var handled: Array[Node] = []
+	for area in get_overlapping_areas():
+		handled.append(area.get_parent())
+	return _nearest_free(handled)
+
+
+func _nearest_free(nodes: Array) -> Grabbable:
 	var best: Grabbable = null
 	var best_distance := INF
-	for body in get_overlapping_bodies():
+	for body in nodes:
 		if body is Grabbable and body.holder == null and body.is_inside_tree():
 			var distance := global_position.distance_squared_to(body.global_position)
 			if distance < best_distance:

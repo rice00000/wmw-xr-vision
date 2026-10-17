@@ -232,6 +232,7 @@ func _open_world() -> void:
 			wrong = node as Grabbable
 			break
 	var other := Node3D.new()
+	add_child(other)
 	wrong.grab(other)
 	other.free()
 	_check(trial.tries == 1 and trial.is_running(), "a wrong pick counts a try and the round goes on")
@@ -956,14 +957,64 @@ func _hands_and_placement() -> void:
 	_check(layout.items().size() == owned_before and not facts.has("taken_out:lamp"),
 		"asking for furniture you do not own does nothing")
 	Inventory.add(&"lamp", 2)
+	right.get_parent().position = Vector3(0.3, 1.0, 0.3) # clear of the tutorial's chair
 	Events.place_requested.emit(&"lamp")
 	var lamp := layout.items()[layout.items().size() - 1] as Grabbable
 	_check(Inventory.count(&"lamp") == 1, "taking one out leaves one in the bag")
 	_check(layout.items().size() == owned_before + 1 and lamp.id == &"lamp", "the lamp is in the world's layout")
 	_check(facts.has("taken_out:lamp"), "taking out is reported")
 	_check(lamp.holder == right, "it lands in the free hand, the right one first")
+
+	# Carried the way it will stand: square, its near side in the hand, on the
+	# floor under it. Lifting or tilting the hand changes none of that; only a
+	# twist of the wrist turns it, in 45° steps that tick in the hand.
+	var floorboards := player.floor_y() + 0.05 # the house's
+	var yaw := lamp.global_rotation.y
+	_check(absf(lamp.global_position.y - floorboards) < 0.03 and lamp.global_basis.y.is_equal_approx(Vector3.UP)
+		and is_zero_approx(fposmod(yaw + 0.01, Placeable.TURN_STEP) - 0.01),
+		"taken out, it stands square on the floor under the hand")
+	_check(player.to_local(lamp.global_position).z < player.to_local(right.global_position).z,
+		"the hand holds its near side, the rest reaching away from the child")
+	right.get_parent().position = Vector3(0.3, 1.3, 0.2)
+	right.get_parent().rotation = Vector3(0.8, 0.0, 0.0)
+	await _physics_frames()
+	_check(absf(lamp.global_position.y - floorboards) < 0.03 and lamp.global_basis.y.is_equal_approx(Vector3.UP)
+		and is_equal_approx(lamp.global_rotation.y, yaw), "lifting and tilting the hand leave it standing as it was")
+	right.last_pulse = 0.0
+	right.get_parent().rotation = Vector3(0.0, deg_to_rad(15.0), 0.0)
+	await _physics_frames()
+	_check(is_equal_approx(lamp.global_rotation.y, yaw) and right.last_pulse == 0.0, "a small twist does not turn it")
+	right.get_parent().rotation = Vector3(0.0, deg_to_rad(30.0), 0.0)
+	await _physics_frames()
+	_check(is_equal_approx(wrapf(lamp.global_rotation.y - yaw, -PI, PI), Placeable.TURN_STEP) and right.last_pulse > 0.0,
+		"a twist turns it one 45° step, with a tick in the hand")
+	var table := (load("res://content/items/table.tscn") as PackedScene).instantiate() as Placeable
+	level.add_child(table)
+	table.global_position = Vector3(right.global_position.x, floorboards, right.global_position.z)
+	await _physics_frames()
+	_check(absf(lamp.global_position.y - table.global_position.y - 0.625) < 0.01, "carried over a table, it stands on the table")
+	level.remove_child(table)
+	table.queue_free()
+	right.get_parent().rotation = Vector3.ZERO
+	await _physics_frames()
 	right.release()
 	_check(facts.has("placed:lamp") and lamp.holder == null, "letting go places it")
+	_check(absf(lamp.global_position.y - floorboards) < 0.03 and is_equal_approx(lamp.global_rotation.y, yaw),
+		"and it stays exactly as it was carried")
+
+	# Low furniture has a handle: a rug is taken from well above the floor.
+	var rug := (load("res://content/items/rug.tscn") as PackedScene).instantiate() as Placeable
+	level.add_child(rug)
+	left.get_parent().position = Vector3(-0.8, 0.5, -0.4)
+	rug.global_position = Vector3(left.global_position.x, floorboards, left.global_position.z)
+	await _physics_frames()
+	left.grab()
+	_check(left.held == rug and lamp.get_node_or_null(^"Handle") == null,
+		"a rug is taken by a hand half a metre above it; tall things need no handle")
+	left.release()
+	level.remove_child(rug)
+	rug.queue_free()
+	left.get_parent().position = left_rest
 
 	# Put away: lifting furniture must not lift its touch target out of reach.
 	right.hold(lamp)
@@ -1023,25 +1074,23 @@ func _hands_and_placement() -> void:
 	Events.reported.disconnect(listen)
 
 	# The layout is remembered: id and transform of every item. One is in a hand
-	# when the game saves (focus lost): it comes back standing on the floor.
+	# when the game saves (focus lost): carried standing, it comes back standing.
 	right.hold(first)
 	right.get_parent().position = Vector3(0.3, 1.6, -0.3)
 	await _physics_frames(1)
+	var held_index := layout.items().find(first)
 	var saved := layout.save_state()
 	Save.write()
 	Save.reload()
 	var loaded := layout.save_state()
 	var same: bool = saved.items.size() == loaded.items.size() and saved.items.size() == owned_before + 3
-	var held_index := -1
 	for i in mini(saved.items.size(), loaded.items.size()):
 		same = same and saved.items[i][0] == loaded.items[i][0] \
 			and (saved.items[i][1] as Transform3D).is_equal_approx(loaded.items[i][1])
-		if saved.items[i][2]:
-			held_index = i
 	_check(same, "the layout survives a save/load round trip, ids and transforms")
 	await _physics_frames(2)
 	_check(held_index >= 0 and absf(layout.items()[held_index].global_position.y - floor_y) < 0.02,
-		"an item saved while held comes back settled on the floor, not in mid-air")
+		"furniture saved mid-carry comes back standing on the floor, not in mid-air")
 	right.get_parent().position = right_rest
 	left.get_parent().position = left_rest
 
@@ -1057,8 +1106,7 @@ func _hands_and_placement() -> void:
 			continue
 		var node := def.scene.instantiate()
 		var visual := node.get_node_or_null(^"Visual")
-		if not (node is Grabbable) or not (node.get_node_or_null(^"Placeable") is Placeable) \
-				or visual == null or not visual.scene_file_path.begins_with("res://content/items/visuals/") \
+		if not (node is Placeable) or visual == null or not visual.scene_file_path.begins_with("res://content/items/visuals/") \
 				or _has_script(visual):
 			bad.append("%s (scene)" % item_id)
 		node.free()

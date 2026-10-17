@@ -11,7 +11,7 @@ Godot **4.7.2**, GDScript, Mobile renderer, OpenXR, Meta Quest.
 - **PC / Mac:** install [Meta XR Simulator](https://developers.meta.com/horizon/documentation/native/xrsim-getting-started/), enable its OpenXR runtime, then run the project in Godot. The simulator uses the same XR controls as the headset.
 - **Quest:** install Godot OpenXR Vendors **5.1.0** and the Android build template. Connect and authorize the headset, then run the **Meta Quest 3** export preset.
 
-**Controls:** grip grabs; touch catches creatures and presses world buttons. Left stick walks, including during tasks; right stick turns (forward teleports). B / Y asks for help. Touch the left wrist star or release Menu (simulator M) to open the menu; point and pull the trigger to select. Close through Home → Close or Menu. Menu + Y toggles the Facilitator panel (difficulty, save slots). The world pauses while menus are open. Task lists expand/collapse with Show/Hide; use Back/More or flick either thumbstick vertically to page through menus. View height (Lower / Higher) is on the menu's Settings page.
+**Controls:** grip grabs (held furniture stands on what is below; twist the wrist to turn it); touch catches creatures and presses world buttons. Left stick walks, including during tasks; right stick turns (forward teleports). B / Y asks for help. Touch the left wrist star or release Menu (simulator M) to open the menu; point and pull the trigger to select. Close through Home → Close or Menu. Menu + Y toggles the Facilitator panel (difficulty, save slots). The world pauses while menus are open. Task lists expand/collapse with Show/Hide; use Back/More or flick either thumbstick vertically to page through menus. View height (Lower / Higher) is on the menu's Settings page.
 
 ## Where things are
 
@@ -44,7 +44,7 @@ Tasks coordinates task lists, activation, rewards and the current goal (`Events.
 
 - **Task:** a `TaskDef` in `content/tasks/`, with fact or trial steps and rewards; add its ID to a `TaskListDef` in `content/task_lists/`. See [authoring and restart rules](docs/tasks.md).
 - **Trial:** a `TrialDef`, a `Trial` subclass and a station scene.
-- **Furniture:** an `ItemDef` and a `Grabbable` scene with a `Placeable` child.
+- **Furniture:** an `ItemDef` and a `Placeable` scene, origin at the bottom.
 - **Visuals:** script-free scenes under `content/`, instanced as `Visual` children.
 - **Sound:** a row in `content/audio/sounds.tsv`.
 - **Speech:** edit the text; the editor bakes audio automatically. See [baked speech](docs/baked-speech.md).

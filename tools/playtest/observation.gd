@@ -17,10 +17,12 @@ static func pose() -> Dictionary:
 	for side in ["left", "right"]:
 		var hand := player.get_node("%sController/Hand" % side.capitalize()) as Hand
 		hands[side] = {position = vector(hand.global_position),
+			basis = basis(hand.global_basis), fingertip = vector(hand.poke_point()),
 			held = str(hand.held.id) if is_instance_valid(hand.held) else "",
 			held_path = str(hand.held.get_path()) if is_instance_valid(hand.held) else "",
 			radius = (hand.get_node(^"Shape").shape as SphereShape3D).radius}
 	return {eye = vector(camera.global_position), eye_basis = basis(camera.global_basis),
+		seconds = Time.get_ticks_usec() / 1000000.0,
 		rig_position = vector(player.global_position), rig_basis = basis(player.global_basis), hands = hands}
 
 
@@ -49,6 +51,9 @@ static func target(node: Node3D) -> Dictionary:
 			allowed.append(side)
 		if node is Grabbable:
 			grasp[side] = _grasp_surface(node, hand.global_position)
+	if node == Menu.star():
+		allowed = ["right"]
+		radius = Menu.STAR_RADIUS
 	var camera := Game.player.get_node(^"Camera") as Node3D
 	var blockers: Array = []
 	var clear := 0
@@ -72,6 +77,9 @@ static func target(node: Node3D) -> Dictionary:
 		visible = node.is_visible_in_tree(), visual_corners = corners, touch_radius = radius,
 		allowed_hands = allowed, clear_fraction = clear / 5.0, blockers = blockers,
 		grasp = grasp,
+		basis = basis(node.global_basis),
+		done = node is Catchable and node.is_done(),
+		ray_size = [node.size.x, node.size.y] if node is RayButton else [],
 		occlusion_model = "physics collision proxies"}
 
 

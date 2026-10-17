@@ -1,6 +1,8 @@
 class_name Grabbable
 extends RigidBody3D
 ## A physics object hands can pick up. Reports "grabbed:<id>".
+## A hand takes it by touching its body, or else by being inside one of its
+## Area3D children: a handle, for things too low to reach (see Placeable).
 
 signal grabbed(hand: Node3D)
 signal released(hand: Node3D)
@@ -16,17 +18,25 @@ enum Release {
 
 ## The hand holding this body, or null.
 var holder: Node3D
+## Where the body sits in the holding hand, taken when it is grabbed.
+var grip := Transform3D.IDENTITY
 
 
 func grab(hand: Node3D) -> bool:
 	if holder:
 		return false
 	holder = hand
+	grip = hand.global_transform.affine_inverse() * global_transform
 	freeze_mode = RigidBody3D.FREEZE_MODE_KINEMATIC
 	freeze = true
 	grabbed.emit(hand)
 	Events.report(&"grabbed", id if not id.is_empty() else StringName(name), {position = global_position})
 	return true
+
+
+## Follows the holding hand, now at [param hand]: rigidly, as it was taken.
+func carry(hand: Transform3D) -> void:
+	global_transform = hand * grip
 
 
 func release(hand: Node3D, velocity: Vector3) -> void:

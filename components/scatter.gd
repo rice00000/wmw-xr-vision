@@ -10,6 +10,8 @@ extends Node3D
 
 @export var scenes: Array[PackedScene] = []
 @export var radius := 4.0
+## Compress placement depth without scaling objects. Useful for reachable tabletop rows.
+@export_range(0.05, 1.0) var depth_scale := 1.0
 @export var min_count := 10
 @export var max_count := 40
 ## Training visual skill that sets the amount. Empty = always [member min_count].
@@ -105,7 +107,7 @@ func _free_spot(rng: RandomNumberGenerator, spread: float, gap: float, taken: Ar
 	for _attempt in 12:
 		var angle := rng.randf() * TAU
 		var distance := sqrt(rng.randf()) * spread
-		var spot := Vector2(cos(angle), sin(angle)) * distance
+		var spot := Vector2(cos(angle), sin(angle) * depth_scale) * distance
 		var clearance := INF
 		for other in taken:
 			clearance = minf(clearance, spot.distance_to(other))

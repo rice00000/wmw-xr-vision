@@ -25,6 +25,9 @@ New physical scenarios use `Actor` in `tools/playtest/actor.py`: `grab`, `watch`
 - `interaction_fixture.gd`: real furniture/player components, isolated from player saves; deliberate faults exist only here.
 
 The actor preflights paths, limits movement speed and checks intermediate observations. Shoulders stay fixed when the head turns.
+Hand spheres must remain separate; each single-hand movement checks the entire segment
+against the stationary other hand before sending movement. This is a conservative
+controller-clearance check, not a model of fingers, wrists or elbows.
 Touch checks use the hand and button surfaces, rather than demanding that their centres meet.
 `watch(..., stable=True)` catches prompts that move during reaching. Scenarios must assert the actual gameplay outcome.
 
@@ -32,6 +35,34 @@ Touch checks use the hand and button surfaces, rather than demanding that their 
 Wrong rejection reasons and undetected faults fail the suite. Coverage includes both hands, three profiles, translated/rotated bodies, chair/lamp storage and deliberate reach/view/path faults.
 
 Limits: assumed torso/shoulders, no elbow biomechanics; configured view cone rather than device per-eye FOV; physics proxies rather than pixel occlusion. Comfort, recognition and readability still need headset playtests.
+
+### What a passing result establishes
+
+This suite measures regression behavior under specified synthetic inputs. It does
+not measure a percentage of human realism or the probability that a child will
+complete the task. The constrained suite currently has 12 furniture-storage
+success cases (three profiles, two hands, chair/lamp) and 11 deliberate fault
+cases. Its body constraints do not yet cover the full island walkthrough.
+
+The functional walkthrough reads correct target identities and exact coordinates
+from game state. It therefore skips discovering targets, interpreting instructions
+and deciding what to do. A visible/reachable target is not necessarily noticed,
+recognized or understood. Five physics rays estimate occlusion; they do not
+measure visible pixel coverage, contrast or text readability.
+
+The body model also has limits in both directions: it can accept an impossible
+elbow/wrist pose or head roll, and it can reject a task a person could complete by
+leaning or taking a curved hand path. Head turns are applied directly, hand paths
+are segmented straight lines, and tracking is always supplied at high confidence.
+Synthetic profile dimensions and comfort thresholds are assumptions, not measured
+population coverage.
+
+The next useful extensions are constrained whole-game scenarios, reproducible
+timing/aim/tracking perturbations and recovery paths, then recorded headset-motion
+replay. Calibrate those models against representative users and evaluate them on
+separate sessions. Report task success, retries, assistance, completion time and
+simulation-versus-observation disagreement separately. Quest rendering/performance,
+perceived comfort and comprehension require device and human validation.
 
 This is a standalone testing entry point at `<span>tools/playtest/session.tscn</span>`, which loads the existing `<span>main.tscn</span>`.
 

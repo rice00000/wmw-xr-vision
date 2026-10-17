@@ -36,6 +36,9 @@ def furniture_storage(actor, side, item, yaw, image_name=None):
     actor.look(pitch=-20)
     if image_name:
         actor.capture(image_name)
+    actor.miss_touch("put_away", other)
+    actor.expect(lambda state: not state["inventory"].get(item)
+                 and state["hands"][side]["held"] == item, "miss leaves furniture held")
     actor.touch("put_away", other)
     actor.expect(lambda state: state["inventory"].get(item) == 1
                  and not state["hands"][side]["held"], "furniture returned through physical contact")
@@ -118,10 +121,7 @@ def main():
             except (OSError, RuntimeError, subprocess.TimeoutExpired):
                 process.terminate()
                 process.wait(timeout=5)
-        if process.returncode:
-            print(f"Godot exited with code {process.returncode}; inspect {Path(args.out) / 'godot.log'}", flush=True)
-            report.cases.append({"name": "engine_session", "passed": False,
-                                 "error": f"Godot exit code {process.returncode}"})
+        report.engine_result(process.returncode)
         passed = report.save()
         report.close()
     raise SystemExit(0 if passed else 1)

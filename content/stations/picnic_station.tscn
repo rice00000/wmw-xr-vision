@@ -22,10 +22,11 @@ trial_id = &"search"
 [node name="Visual" parent="." instance=ExtResource("2_visual")]
 
 [node name="Objects" type="Node3D" parent="."]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.642, -0.45)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.642, -0.24)
 script = ExtResource("3_scatter")
-radius = 0.3
-spacing = 0.15
+radius = 0.45
+depth_scale = 0.25
+spacing = 0.18
 unique = true
 
 [node name="Trial" type="Node" parent="Runner" node_paths=PackedStringArray("scatter")]

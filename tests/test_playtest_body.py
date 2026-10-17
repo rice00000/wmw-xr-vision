@@ -4,6 +4,7 @@ from contextlib import redirect_stdout
 from dataclasses import replace
 import json
 import io
+import copy
 from pathlib import Path
 import sys
 import tempfile
@@ -171,6 +172,104 @@ class BodyTests(unittest.TestCase):
     def test_invalid_speed_limit_is_rejected(self):
         with self.assertRaises(ValueError):
             replace(self.limits, max_hand_speed=0)
+
+    def test_overlapping_hands_are_rejected(self):
+        observed = pose()
+        for hand in observed["hands"].values():
+            hand["position"] = [0, 1.05, -0.3]
+        self.rejects("hands_overlap", lambda: self.body.posture(observed))
+
+    def test_hand_clearance_boundary(self):
+        point = (0, 1.05, -0.3)
+        self.body.hand_clearance(point, add(point, (2 * self.limits.hand_radius, 0, 0)))
+        self.rejects("hands_overlap", lambda: self.body.hand_clearance(
+            point, add(point, (2 * self.limits.hand_radius - 0.001, 0, 0))))
+
+    def test_hand_path_checks_between_samples(self):
+        # A coarse path has only its two clear endpoints, but crosses the other hand.
+        body = Body(self.profiles[1], replace(self.limits, path_step=1), pose())
+        start, end, other = (-0.20, 1.05, -0.3), (0.20, 1.05, -0.3), (0, 1.05, -0.3)
+        body.path("right", start, end)
+        body.hand_clearance(start, other)
+        body.hand_clearance(end, other)
+        self.rejects("hands_overlap", lambda: body.path("right", start, end, other_hand=other))
+
+    def test_stationary_hand_path_still_checks_clearance(self):
+        point = (0, 1.05, -0.3)
+        self.body.path("right", point, point, other_hand=(-0.2, 1.05, -0.3))
+        self.rejects("hands_overlap", lambda: self.body.path("right", point, point, other_hand=point))
+
+    def test_hand_collision_preflight_sends_no_movement(self):
+        class Transport:
+            def __init__(self):
+                self.commands = []
+
+            def send(self, command, **_args):
+                self.commands.append(command)
+                return {"observation": {"pose": pose(), "targets": {}}}
+
+        with tempfile.TemporaryDirectory() as out:
+            report = Report(out, "test")
+            transport = Transport()
+            actor = Actor(transport, self.profiles[1], self.limits, report)
+            self.rejects("hands_overlap", lambda: actor.move("right", (-0.20, 0.90, -0.20)))
+            self.assertNotIn("step", transport.commands)
+            self.assertNotIn("probe", transport.commands)
+            report.close()
+
+    def test_ray_target_does_not_require_touch_reach(self):
+        button = target((0, 1.05, -1.0), size=.12)
+        self.rejects("reach", lambda: self.body.target(pose(), button, "right"))
+        self.body.target(pose(), button, "right", reachable=False)
+
+    def test_continuous_move_batches_transport_and_checks_intermediate_samples(self):
+        class Transport:
+            bad_sample = False
+
+            def __init__(self):
+                self.commands = []
+
+            def send(self, command, **args):
+                self.commands.append((command, args))
+                if command == "probe":
+                    return {"probe": {"clear": True}}
+                observed = {"pose": pose(), "targets": {}}
+                if command == "step":
+                    observed["pose"]["hands"]["right"]["position"] = args["position"]
+                    middle = copy.deepcopy(observed)
+                    if self.bad_sample:
+                        middle["pose"]["hands"]["right"]["position"] = [0, 3, 0]
+                    return {"observation": observed, "samples": [middle, observed]}
+                return {"observation": observed}
+
+        with tempfile.TemporaryDirectory() as out:
+            report = Report(out, "test")
+            transport = Transport()
+            actor = Actor(transport, self.profiles[1], self.limits, report)
+            actor.move("right", (.22, .90, -.40))
+            steps = [args for command, args in transport.commands if command == "step"]
+            self.assertEqual(len(steps), 1)
+            self.assertEqual(steps[0]["guard"]["radius"], self.limits.hand_radius)
+            self.assertGreaterEqual(steps[0]["seconds"], .2 / self.limits.max_hand_speed)
+            transport.bad_sample = True
+            self.rejects("reach", lambda: actor.move("right", (.22, .90, -.40)))
+            report.close()
+
+    def test_continuous_move_rejects_engine_collision_guard(self):
+        class Transport:
+            def send(self, command, **args):
+                if command == "probe":
+                    return {"probe": {"clear": True}}
+                observed = {"pose": pose(), "targets": {}}
+                if command == "step":
+                    return {"observation": observed, "samples": [{"blocked": {"clear": False}}]}
+                return {"observation": observed}
+
+        with tempfile.TemporaryDirectory() as out:
+            report = Report(out, "test")
+            actor = Actor(Transport(), self.profiles[1], self.limits, report)
+            self.rejects("path_blocked", lambda: actor.move("right", (.22, .90, -.4)))
+            report.close()
 
     def test_infrastructure_failure_is_recorded_and_stops_the_suite(self):
         with tempfile.TemporaryDirectory() as out:

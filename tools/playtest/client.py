@@ -55,7 +55,8 @@ def launch(args):
         raise RuntimeError(f"Port {args.port} already has a session; quit it or choose another --port")
     out = Path(args.out).resolve()
     out.mkdir(parents=True, exist_ok=True)
-    synthetic_render = not args.headless and getattr(args, "fixture", None) == "interaction"
+    synthetic_render = not args.headless and (getattr(args, "fixture", None) == "interaction"
+                                              or getattr(args, "journey", False))
     env = os.environ.copy() if args.headless or synthetic_render else godot.xr_env()
     command = [str(args.godot or godot.executable()), "--path", str(ROOT)]
     if synthetic_render:
@@ -68,6 +69,8 @@ def launch(args):
                 f"--profile={args.profile}", f"--port={args.port}", f"--out={out.as_posix()}"]
     if getattr(args, "fixture", None):
         command.append("--fixture=" + args.fixture)
+    if getattr(args, "journey", False):
+        command.append("--journey")
     with (out / "console.log").open("w", encoding="utf-8") as log:
         process = subprocess.Popen(command, cwd=ROOT, env=env, stdout=log, stderr=log,
                                    creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)

@@ -85,10 +85,11 @@ func _process(_delta: float) -> void:
 			button.global_position = button.item.global_position + Vector3.UP * (DecorLayout._local_bounds(button.item).end.y + 0.12)
 		"far":
 			button.global_position += Game.player.global_basis * Vector3(0, 0, -1)
-		"chasing":
+		"chasing": # follows the holding hand up and down
+			var hand := (button.item as Grabbable).holder
 			if _chase_height == INF:
-				_chase_height = button.item.global_position.y
-			button.global_position.y += button.item.global_position.y - _chase_height
+				_chase_height = hand.global_position.y
+			button.global_position.y += hand.global_position.y - _chase_height
 		"head_anchored": # previous fix: looking toward the item puts the prompt into it
 			var camera := Game.player.get_node(^"Camera") as Node3D
 			if _fault_anchor == Vector3.INF:
